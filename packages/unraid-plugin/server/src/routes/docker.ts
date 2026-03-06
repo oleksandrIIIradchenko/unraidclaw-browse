@@ -141,8 +141,8 @@ export function registerDockerRoutes(app: FastifyInstance, gql: GraphQLClient): 
         ports = [],
         volumes = [],
         env = [],
-        restart,
-        network,
+        restart = "unless-stopped",
+        network = "bridge",
       } = req.body;
 
       const args = ["run", "-d"];
@@ -156,7 +156,68 @@ export function registerDockerRoutes(app: FastifyInstance, gql: GraphQLClient): 
 
       try {
         const { stdout } = await execFileAsync("docker", args);
-        return reply.send({ ok: true, data: { id: stdout.trim() } });
+        const containerId = stdout.trim();
+
+        // Build Unraid XML template so container appears as first-class citizen in UI
+        const containerName = name ?? containerId.substring(0, 12);
+        const [repo] = image.split(":");
+        const registry = `https://hub.docker.com/r/${repo}`;
+        const dateInstalled = Math.floor(Date.now() / 1000);
+
+        // Port configs
+        const portConfigs = ports.map((p) => {
+          const [host, container] = p.split(":");
+          const proto = container.includes("/udp") ? "udp" : "tcp";
+          const containerPort = container.replace("/udp", "").replace("/tcp", "");
+          return `  <Config Name="Port ${containerPort}/${proto}" Target="${containerPort}" Default="${host}" Mode="${proto}" Description="" Type="Port" Display="always" Required="false" Mask="false">${host}</Config>`;
+        }).join("\n");
+
+        // Volume configs
+        const volumeConfigs = volumes.map((v) => {
+          const [host, container] = v.split(":");
+          const mode = v.split(":")[2] ?? "rw";
+          return `  <Config Name="${container}" Target="${container}" Default="" Mode="${mode}" Description="" Type="Path" Display="always" Required="false" Mask="false">${host}</Config>`;
+        }).join("\n");
+
+        // Env var configs
+        const envConfigs = env.map((e) => {
+          const [key, ...rest] = e.split("=");
+          const val = rest.join("=");
+          const masked = key.toLowerCase().includes("secret") || key.toLowerCase().includes("password") || key.toLowerCase().includes("key");
+          return `  <Config Name="${key}" Target="${key}" Default="" Mode="" Description="" Type="Variable" Display="always" Required="false" Mask="${masked}">${val}</Config>`;
+        }).join("\n");
+
+        const xml = `<?xml version="1.0"?>
+<Container version="2">
+  <Name>${containerName}</Name>
+  <Repository>${image}</Repository>
+  <Registry>${registry}</Registry>
+  <Network>${network}</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support/>
+  <Project/>
+  <Overview>Deployed by UnraidClaw</Overview>
+  <Category/>
+  <WebUI/>
+  <TemplateURL/>
+  <Icon/>
+  <ExtraParams/>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled>${dateInstalled}</DateInstalled>
+  <Requires/>
+${portConfigs}
+${volumeConfigs}
+${envConfigs}
+</Container>`;
+
+        const templateDir = "/boot/config/plugins/dockerMan/templates-user";
+        const templatePath = `${templateDir}/my-${containerName}.xml`;
+        await import("node:fs/promises").then(fs => fs.writeFile(templatePath, xml, "utf8"));
+
+        return reply.send({ ok: true, data: { id: containerId, template: templatePath } });
       } catch (err: any) {
         return reply.status(500).send({
           ok: false,
