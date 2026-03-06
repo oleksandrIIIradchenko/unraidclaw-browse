@@ -14,6 +14,36 @@
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.12.0" max="7.99.99" support="https://forums.unraid.net/topic/197498-plugin-support-unraidclaw-ai-agent-gateway-with-permission-control/" description="Permission-enforcing REST API gateway that lets AI agents manage your Unraid server with fine-grained access control.">
 
 <CHANGES>
+### 0.1.22
+- Fix Docker inspect, logs, and all actions (start/stop/restart/pause/unpause) failing with 400 Bad Request
+- Switch all Docker operations from GraphQL to CLI (docker inspect, docker logs, docker start, etc.)
+- Switch all VM operations from GraphQL to virsh CLI
+- Fix OpenAI function calling compatibility (add properties to parameter-less tool schemas)
+- Fix global TLS bypass in OpenClaw plugin (scoped https.Agent instead of process-wide env var)
+- Fix XML injection in docker:create template generation
+- Restrict volume pre-creation to /mnt/ paths only
+- Add ADMIN API key requirement to docs
+- Correct README route paths (/api/array/status, /api/array/parity/status)
+
+### 0.1.21
+- Add version number, GitHub link, and buy me a coffee to dashboard
+- Fix CA template category and support URL
+
+### 0.1.20
+- Add human-readable size fields (freeHuman, sizeHuman) to shares, disks, and array responses
+
+### 0.1.19
+- Keep service running when array stops (most tools work without the array)
+- Add Unraid API key setup step to documentation
+
+### 0.1.18
+- Fix CI typecheck for openclaw-plugin tsconfig rootDir
+
+### 0.1.17
+- HTTPS with auto-generated self-signed TLS certificate
+- Share editing (PATCH /api/shares/:name)
+- OpenClaw plugin published to npm
+
 ### 0.1.6
 - Fix VMs query: remove non-existent fields (coreCount, ramAllocation, primaryGPU, description, autoStart)
 - Auto-restart service on plugin upgrade
@@ -31,8 +61,6 @@
 - SHA-256 API key authentication
 - Activity logging with JSONL format
 - Single-page tabbed UI (Dashboard, Settings, Permissions, Activity Log)
-- CJS server bundle with all dependencies included
-- Node.js 22+ (built-in on Unraid 7.x)
 </CHANGES>
 
 <README>
