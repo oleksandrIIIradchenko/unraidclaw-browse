@@ -48,7 +48,7 @@ plugin install https://raw.githubusercontent.com/emaspa/unraidclaw/main/packages
 
 ### Setup
 
-1. Go to **Settings > Management Access** in the Unraid WebGUI, scroll to the API section, and copy your Unraid API key
+1. Go to **Settings > Management Access** in the Unraid WebGUI, scroll to the API section, and copy your Unraid API key (must have **ADMIN** role)
 2. Go to **Settings > UnraidClaw**, paste the Unraid API key into the **Unraid API Key** field
 3. Generate an UnraidClaw API key (it's hashed with SHA-256; save it, it won't be shown again)
 4. Configure permissions on the **Permissions** tab
@@ -77,14 +77,15 @@ Authentication via `Authorization: Bearer <api-key>` header.
 | **Docker** | GET | `/api/docker` | `docker:read` |
 | | GET | `/api/docker/:id` | `docker:read` |
 | | GET | `/api/docker/:id/logs` | `docker:read` |
+| | POST | `/api/docker/containers` | `docker:create` |
 | | POST | `/api/docker/:id/:action` | `docker:update` |
 | | DELETE | `/api/docker/:id` | `docker:delete` |
 | **VMs** | GET | `/api/vms` | `vms:read` |
 | | GET | `/api/vms/:id` | `vms:read` |
 | | POST | `/api/vms/:id/:action` | `vms:update` |
 | | DELETE | `/api/vms/:id` | `vms:delete` |
-| **Array** | GET | `/api/array` | `array:read` |
-| | GET | `/api/array/parity` | `array:read` |
+| **Array** | GET | `/api/array/status` | `array:read` |
+| | GET | `/api/array/parity/status` | `array:read` |
 | | POST | `/api/array/start` | `array:update` |
 | | POST | `/api/array/stop` | `array:update` |
 | | POST | `/api/array/parity/start` | `array:update` |
@@ -169,7 +170,7 @@ Set `tlsSkipVerify: true` when using the auto-generated self-signed certificate.
 | Category | Tools |
 |----------|-------|
 | Health | `unraid_health_check` |
-| Docker | `unraid_docker_list`, `unraid_docker_inspect`, `unraid_docker_logs`, `unraid_docker_start`, `unraid_docker_stop`, `unraid_docker_restart`, `unraid_docker_pause`, `unraid_docker_unpause`, `unraid_docker_remove` |
+| Docker | `unraid_docker_list`, `unraid_docker_inspect`, `unraid_docker_logs`, `unraid_docker_create`, `unraid_docker_start`, `unraid_docker_stop`, `unraid_docker_restart`, `unraid_docker_pause`, `unraid_docker_unpause`, `unraid_docker_remove` |
 | VMs | `unraid_vm_list`, `unraid_vm_inspect`, `unraid_vm_start`, `unraid_vm_stop`, `unraid_vm_pause`, `unraid_vm_resume`, `unraid_vm_force_stop`, `unraid_vm_reboot` |
 | Array | `unraid_array_status`, `unraid_array_start`, `unraid_array_stop`, `unraid_parity_status`, `unraid_parity_start`, `unraid_parity_pause`, `unraid_parity_resume`, `unraid_parity_cancel` |
 | Disks | `unraid_disk_list`, `unraid_disk_details` |
@@ -186,7 +187,7 @@ Permissions use a `resource:action` format. Configure them from the WebGUI Permi
 
 | Category | Permissions |
 |----------|------------|
-| Docker | `docker:read`, `docker:update`, `docker:delete` |
+| Docker | `docker:read`, `docker:create`, `docker:update`, `docker:delete` |
 | VMs | `vms:read`, `vms:update`, `vms:delete` |
 | Array & Storage | `array:read`, `array:update`, `disk:read`, `share:read`, `share:update` |
 | System | `info:read`, `os:update`, `services:read` |

@@ -1,8 +1,12 @@
 import type { FastifyInstance } from "fastify";
 import { Resource, Action } from "@unraidclaw/shared";
-import type { VM, VMActionResponse } from "@unraidclaw/shared";
+import type { VM } from "@unraidclaw/shared";
 import type { GraphQLClient } from "../graphql-client.js";
 import { requirePermission } from "../permissions.js";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+
+const execFileAsync = promisify(execFile);
 
 const LIST_QUERY = `query {
   vms {
@@ -15,29 +19,15 @@ const LIST_QUERY = `query {
   }
 }`;
 
-const DETAIL_QUERY = `query ($id: String!) {
-  vms {
-    domain(id: $id) {
-      id
-      name
-      state
-      uuid
-    }
-  }
-}`;
-
-function vmMutation(action: string): string {
-  return `mutation ($id: String!) {
-    vms {
-      ${action}(id: $id) {
-        id
-        name
-        state
-        uuid
-      }
-    }
-  }`;
-}
+const VIRSH_ACTION_MAP: Record<string, string> = {
+  start: "start",
+  stop: "shutdown",
+  "force-stop": "destroy",
+  pause: "suspend",
+  resume: "resume",
+  reboot: "reboot",
+  reset: "reset",
+};
 
 export function registerVMRoutes(app: FastifyInstance, gql: GraphQLClient): void {
   // List VMs
@@ -49,48 +39,64 @@ export function registerVMRoutes(app: FastifyInstance, gql: GraphQLClient): void
     },
   });
 
-  // Get VM details
+  // Get VM details (filter from list)
   app.get<{ Params: { id: string } }>("/api/vms/:id", {
     preHandler: requirePermission(Resource.VMS, Action.READ),
     handler: async (req, reply) => {
-      const data = await gql.query<{ vms: { domain: VM } }>(DETAIL_QUERY, { id: req.params.id });
-      return reply.send({ ok: true, data: data.vms.domain });
+      const data = await gql.query<{ vms: { domains: VM[] } }>(LIST_QUERY);
+      const search = req.params.id.toLowerCase();
+      const vm = data.vms.domains.find(
+        (d) => d.name.toLowerCase() === search || d.uuid === req.params.id || d.id === req.params.id
+      );
+      if (!vm) {
+        return reply.status(404).send({
+          ok: false,
+          error: { code: "NOT_FOUND", message: `VM '${req.params.id}' not found` },
+        });
+      }
+      return reply.send({ ok: true, data: vm });
     },
   });
 
-  // VM actions: start, stop, pause, resume, force-stop, reboot, reset
-  const actionMap: Record<string, { mutation: string; permission: Action }> = {
-    start: { mutation: "start", permission: Action.UPDATE },
-    stop: { mutation: "stop", permission: Action.UPDATE },
-    pause: { mutation: "pause", permission: Action.UPDATE },
-    resume: { mutation: "resume", permission: Action.UPDATE },
-    "force-stop": { mutation: "forceStop", permission: Action.UPDATE },
-    reboot: { mutation: "reboot", permission: Action.UPDATE },
-    reset: { mutation: "reset", permission: Action.UPDATE },
-  };
-
-  for (const [path, { mutation, permission }] of Object.entries(actionMap)) {
+  // VM actions via virsh CLI
+  for (const [path, virshCmd] of Object.entries(VIRSH_ACTION_MAP)) {
     app.post<{ Params: { id: string } }>(`/api/vms/:id/${path}`, {
-      preHandler: requirePermission(Resource.VMS, permission),
+      preHandler: requirePermission(Resource.VMS, Action.UPDATE),
       handler: async (req, reply) => {
-        const data = await gql.query<{ vms: Record<string, VMActionResponse> }>(
-          vmMutation(mutation),
-          { id: req.params.id }
-        );
-        return reply.send({ ok: true, data: data.vms[mutation] });
+        try {
+          await execFileAsync("virsh", [virshCmd, req.params.id]);
+          // Fetch updated state from virsh
+          const { stdout } = await execFileAsync("virsh", ["domstate", req.params.id]);
+          const state = stdout.trim();
+          return reply.send({
+            ok: true,
+            data: { id: req.params.id, name: req.params.id, state, uuid: "" },
+          });
+        } catch (err: any) {
+          return reply.status(400).send({
+            ok: false,
+            error: { code: "VM_ACTION_FAILED", message: err.stderr?.trim() ?? err.message },
+          });
+        }
       },
     });
   }
 
-  // Remove VM (destructive)
+  // Remove VM (destructive) via virsh
   app.delete<{ Params: { id: string } }>("/api/vms/:id", {
     preHandler: requirePermission(Resource.VMS, Action.DELETE),
     handler: async (req, reply) => {
-      const data = await gql.query<{ vms: { remove: VMActionResponse } }>(
-        vmMutation("remove"),
-        { id: req.params.id }
-      );
-      return reply.send({ ok: true, data: data.vms.remove });
+      try {
+        // Force-stop first if running, then undefine
+        await execFileAsync("virsh", ["destroy", req.params.id]).catch(() => {});
+        await execFileAsync("virsh", ["undefine", req.params.id]);
+        return reply.send({ ok: true, data: { id: req.params.id, name: req.params.id } });
+      } catch (err: any) {
+        return reply.status(400).send({
+          ok: false,
+          error: { code: "VM_REMOVE_FAILED", message: err.stderr?.trim() ?? err.message },
+        });
+      }
     },
   });
 }

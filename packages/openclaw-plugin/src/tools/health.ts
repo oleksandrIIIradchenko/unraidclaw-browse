@@ -6,7 +6,7 @@ export function registerHealthTools(api: any, client: UnraidClient): void {
   api.registerTool({
     name: "unraid_health_check",
     description: "Check the health status of the Unraid server connection, including API and GraphQL reachability.",
-    parameters: { type: "object" },
+    parameters: { type: "object", properties: {} },
     execute: async () => {
       try {
         return textResult(await client.get("/api/health"));

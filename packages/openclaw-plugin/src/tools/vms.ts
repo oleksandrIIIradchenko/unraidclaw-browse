@@ -6,7 +6,7 @@ export function registerVMTools(api: any, client: UnraidClient): void {
   api.registerTool({
     name: "unraid_vm_list",
     description: "List all virtual machines on the Unraid server with their current state.",
-    parameters: { type: "object" },
+    parameters: { type: "object", properties: {} },
     execute: async () => {
       try {
         return textResult(await client.get("/api/vms"));

@@ -6,7 +6,7 @@ export function registerShareTools(api: any, client: UnraidClient): void {
   api.registerTool({
     name: "unraid_share_list",
     description: "List all user shares on the Unraid server with their settings and usage. The 'free' and 'size' fields are in kilobytes (KiB).",
-    parameters: { type: "object" },
+    parameters: { type: "object", properties: {} },
     execute: async () => {
       try {
         return textResult(await client.get("/api/shares"));

@@ -6,7 +6,7 @@ export function registerDockerTools(api: any, client: UnraidClient): void {
   api.registerTool({
     name: "unraid_docker_list",
     description: "List all Docker containers on the Unraid server with their current state, image, and status.",
-    parameters: { type: "object" },
+    parameters: { type: "object", properties: {} },
     execute: async () => {
       try {
         return textResult(await client.get("/api/docker/containers"));

@@ -6,7 +6,7 @@ export function registerArrayTools(api: any, client: UnraidClient): void {
   api.registerTool({
     name: "unraid_array_status",
     description: "Get the current status of the Unraid array including state, capacity, disks, and parities. Capacity is in kilobytes (KiB). Disk 'size' fields are in kilobytes (KiB).",
-    parameters: { type: "object" },
+    parameters: { type: "object", properties: {} },
     execute: async () => {
       try {
         return textResult(await client.get("/api/array/status"));
@@ -19,7 +19,7 @@ export function registerArrayTools(api: any, client: UnraidClient): void {
   api.registerTool({
     name: "unraid_array_start",
     description: "Start the Unraid array. This will mount all disks and start Docker/VMs if configured.",
-    parameters: { type: "object" },
+    parameters: { type: "object", properties: {} },
     execute: async () => {
       try {
         return textResult(await client.post("/api/array/start"));
@@ -32,7 +32,7 @@ export function registerArrayTools(api: any, client: UnraidClient): void {
   api.registerTool({
     name: "unraid_array_stop",
     description: "Stop the Unraid array. This will stop all Docker containers and VMs, then unmount all disks.",
-    parameters: { type: "object" },
+    parameters: { type: "object", properties: {} },
     execute: async () => {
       try {
         return textResult(await client.post("/api/array/stop"));
@@ -45,7 +45,7 @@ export function registerArrayTools(api: any, client: UnraidClient): void {
   api.registerTool({
     name: "unraid_parity_status",
     description: "Get the current parity check status (running, progress, speed, errors).",
-    parameters: { type: "object" },
+    parameters: { type: "object", properties: {} },
     execute: async () => {
       try {
         return textResult(await client.get("/api/array/parity/status"));
@@ -79,7 +79,7 @@ export function registerArrayTools(api: any, client: UnraidClient): void {
   api.registerTool({
     name: "unraid_parity_pause",
     description: "Pause a running parity check.",
-    parameters: { type: "object" },
+    parameters: { type: "object", properties: {} },
     execute: async () => {
       try {
         return textResult(await client.post("/api/array/parity/pause"));
@@ -92,7 +92,7 @@ export function registerArrayTools(api: any, client: UnraidClient): void {
   api.registerTool({
     name: "unraid_parity_resume",
     description: "Resume a paused parity check.",
-    parameters: { type: "object" },
+    parameters: { type: "object", properties: {} },
     execute: async () => {
       try {
         return textResult(await client.post("/api/array/parity/resume"));
@@ -105,7 +105,7 @@ export function registerArrayTools(api: any, client: UnraidClient): void {
   api.registerTool({
     name: "unraid_parity_cancel",
     description: "Cancel a running or paused parity check.",
-    parameters: { type: "object" },
+    parameters: { type: "object", properties: {} },
     execute: async () => {
       try {
         return textResult(await client.post("/api/array/parity/cancel"));

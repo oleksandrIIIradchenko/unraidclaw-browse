@@ -6,7 +6,7 @@ export function registerNotificationTools(api: any, client: UnraidClient): void 
   api.registerTool({
     name: "unraid_notification_list",
     description: "List all system notifications with their importance level and archive status.",
-    parameters: { type: "object" },
+    parameters: { type: "object", properties: {} },
     execute: async () => {
       try {
         return textResult(await client.get("/api/notifications"));

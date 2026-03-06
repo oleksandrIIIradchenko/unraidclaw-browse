@@ -1,3 +1,5 @@
+import { request as httpsRequest, Agent as HttpsAgent } from "node:https";
+import { request as httpRequest } from "node:http";
 import type { ApiResponse } from "@unraidclaw/shared";
 
 export class UnraidApiError extends Error {
@@ -19,7 +21,7 @@ export interface ClientConfig {
 
 export class UnraidClient {
   private configResolver: () => ClientConfig;
-  private tlsConfigured = false;
+  private insecureAgent: HttpsAgent | null = null;
 
   constructor(configResolver: () => ClientConfig) {
     this.configResolver = configResolver;
@@ -30,14 +32,13 @@ export class UnraidClient {
     if (!cfg.serverUrl) {
       throw new UnraidApiError("UnraidClaw serverUrl not configured", 0, "CONFIG_ERROR");
     }
-    // Disable TLS verification for self-signed certs (once)
-    if (!this.tlsConfigured && cfg.tlsSkipVerify && cfg.serverUrl.startsWith("https")) {
-      process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-      this.tlsConfigured = true;
+    if (cfg.tlsSkipVerify && cfg.serverUrl.startsWith("https") && !this.insecureAgent) {
+      this.insecureAgent = new HttpsAgent({ rejectUnauthorized: false });
     }
     return {
       baseUrl: cfg.serverUrl.replace(/\/+$/, ""),
       apiKey: cfg.apiKey || "",
+      isHttps: cfg.serverUrl.startsWith("https"),
     };
   }
 
@@ -48,57 +49,80 @@ export class UnraidClient {
       const params = new URLSearchParams(query);
       url += `?${params.toString()}`;
     }
-    return this.request<T>("GET", url);
+    return this.doRequest<T>("GET", url);
   }
 
   async post<T>(path: string, body?: unknown): Promise<T> {
     const { baseUrl } = this.getConfig();
-    return this.request<T>("POST", `${baseUrl}${path}`, body);
+    return this.doRequest<T>("POST", `${baseUrl}${path}`, body);
   }
 
   async patch<T>(path: string, body?: unknown): Promise<T> {
     const { baseUrl } = this.getConfig();
-    return this.request<T>("PATCH", `${baseUrl}${path}`, body);
+    return this.doRequest<T>("PATCH", `${baseUrl}${path}`, body);
   }
 
   async delete<T>(path: string): Promise<T> {
     const { baseUrl } = this.getConfig();
-    return this.request<T>("DELETE", `${baseUrl}${path}`);
+    return this.doRequest<T>("DELETE", `${baseUrl}${path}`);
   }
 
-  private async request<T>(method: string, url: string, body?: unknown): Promise<T> {
-    const { apiKey } = this.getConfig();
+  private doRequest<T>(method: string, url: string, body?: unknown): Promise<T> {
+    const { apiKey, isHttps } = this.getConfig();
+    const parsed = new URL(url);
+    const payload = body !== undefined ? JSON.stringify(body) : undefined;
+
     const headers: Record<string, string> = {
       "x-api-key": apiKey,
     };
-
-    const init: RequestInit = { method, headers };
-    if (body !== undefined) {
+    if (payload) {
       headers["Content-Type"] = "application/json";
-      init.body = JSON.stringify(body);
+      headers["Content-Length"] = Buffer.byteLength(payload).toString();
     }
 
-    let response: Response;
-    try {
-      response = await fetch(url, init);
-    } catch (err) {
-      throw new UnraidApiError(
-        `Connection failed: ${err instanceof Error ? err.message : "Unknown error"}`,
-        0,
-        "CONNECTION_ERROR"
+    const requestFn = isHttps ? httpsRequest : httpRequest;
+
+    return new Promise<T>((resolve, reject) => {
+      const req = requestFn(
+        {
+          hostname: parsed.hostname,
+          port: parsed.port || (isHttps ? 443 : 80),
+          path: parsed.pathname + parsed.search,
+          method,
+          headers,
+          ...(this.insecureAgent ? { agent: this.insecureAgent } : {}),
+        },
+        (res) => {
+          const chunks: Buffer[] = [];
+          res.on("data", (chunk) => chunks.push(chunk));
+          res.on("end", () => {
+            const text = Buffer.concat(chunks).toString();
+            let json: ApiResponse<T>;
+            try {
+              json = JSON.parse(text);
+            } catch {
+              reject(new UnraidApiError(`Invalid JSON response: ${text.slice(0, 200)}`, res.statusCode ?? 0, "PARSE_ERROR"));
+              return;
+            }
+            if (!json.ok) {
+              reject(new UnraidApiError(json.error.message, res.statusCode ?? 0, json.error.code));
+              return;
+            }
+            resolve(json.data);
+          });
+        }
       );
-    }
 
-    const json = (await response.json()) as ApiResponse<T>;
+      req.on("error", (err) => {
+        reject(new UnraidApiError(
+          `Connection failed: ${err.message}`,
+          0,
+          "CONNECTION_ERROR"
+        ));
+      });
 
-    if (!json.ok) {
-      throw new UnraidApiError(
-        json.error.message,
-        response.status,
-        json.error.code
-      );
-    }
-
-    return json.data;
+      if (payload) req.write(payload);
+      req.end();
+    });
   }
 }

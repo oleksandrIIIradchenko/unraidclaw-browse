@@ -6,7 +6,7 @@ export function registerDiskTools(api: any, client: UnraidClient): void {
   api.registerTool({
     name: "unraid_disk_list",
     description: "List all disks in the Unraid server with basic info (name, size, temp, status). The 'size' field is in kilobytes (KiB).",
-    parameters: { type: "object" },
+    parameters: { type: "object", properties: {} },
     execute: async () => {
       try {
         return textResult(await client.get("/api/disks"));
