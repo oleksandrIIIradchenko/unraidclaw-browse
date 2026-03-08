@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import type { GraphQLClient } from "../graphql-client.js";
 import type { HealthResponse } from "@unraidclaw/shared";
 
-const VERSION = "0.1.0";
+const VERSION = process.env.OCC_VERSION || "dev";
 const startTime = Date.now();
 
 export function registerHealthRoutes(app: FastifyInstance, gql: GraphQLClient): void {

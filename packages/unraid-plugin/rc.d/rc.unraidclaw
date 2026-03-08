@@ -66,6 +66,10 @@ start() {
   export FLASH_BASE="/boot/config/plugins/${PLUGIN}"
   export OCC_LOG_FILE="${LOG_FILE:-/boot/config/plugins/${PLUGIN}/activity.jsonl}"
   export OCC_MAX_LOG_SIZE="${MAX_LOG_SIZE:-10485760}"
+  PLG_FILE="/boot/config/plugins/${PLUGIN}.plg"
+  if [ -f "$PLG_FILE" ]; then
+    export OCC_VERSION=$(grep -oP 'ENTITY\s+version\s+"\K[^"]+' "$PLG_FILE")
+  fi
 
   nohup "$NODE_BIN" "$SERVER" >> "$LOGFILE" 2>&1 &
   echo $! > "$PIDFILE"
