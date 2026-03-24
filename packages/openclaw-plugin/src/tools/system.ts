@@ -5,7 +5,7 @@ import { textResult, errorResult } from "./util.js";
 export function registerSystemTools(api: any, client: UnraidClient): void {
   api.registerTool({
     name: "unraid_system_info",
-    description: "Get system information including OS, CPU, memory, and Unraid/kernel versions.",
+    description: "Get system information: OS (platform, hostname, uptime), CPU (model, cores, threads), memory (total, used, free, percent), and CPU load averages (1m, 5m, 15m).",
     parameters: { type: "object", properties: {} },
     execute: async () => {
       try {
@@ -18,7 +18,7 @@ export function registerSystemTools(api: any, client: UnraidClient): void {
 
   api.registerTool({
     name: "unraid_system_metrics",
-    description: "Get live system metrics: CPU usage, memory usage, load average, and uptime.",
+    description: "Get live system metrics: memory (total, used, free bytes, percent) and CPU load averages (1m, 5m, 15m). Lightweight endpoint for polling.",
     parameters: { type: "object", properties: {} },
     execute: async () => {
       try {

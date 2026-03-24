@@ -5,7 +5,7 @@ import { textResult, errorResult } from "./util.js";
 export function registerDiskTools(api: any, client: UnraidClient): void {
   api.registerTool({
     name: "unraid_disk_list",
-    description: "List all disks in the Unraid server with basic info (name, size, temp, status). The 'size' field is in kilobytes (KiB).",
+    description: "List all disks (data + parity) with name, size, used, free, usedPercent, temp, status, and fsType.",
     parameters: { type: "object", properties: {} },
     execute: async () => {
       try {
@@ -18,7 +18,7 @@ export function registerDiskTools(api: any, client: UnraidClient): void {
 
   api.registerTool({
     name: "unraid_disk_details",
-    description: "Get detailed information about a specific disk including SMART data and health status. The 'size' field is in kilobytes (KiB).",
+    description: "Get details for a specific disk: size, used, free, usedPercent, temp, status, and fsType.",
     parameters: {
       type: "object",
       properties: {
