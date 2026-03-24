@@ -1,15 +1,20 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-import type { UnraidClient } from "../client.js";
+import type { ClientResolver } from "../index.js";
 import { textResult, errorResult } from "./util.js";
 
-export function registerNotificationTools(api: any, client: UnraidClient): void {
+export function registerNotificationTools(api: any, getClient: ClientResolver): void {
   api.registerTool({
     name: "unraid_notification_list",
     description: "List all system notifications with their importance level and archive status.",
-    parameters: { type: "object", properties: {} },
-    execute: async () => {
+    parameters: {
+      type: "object",
+      properties: {
+        server: { type: "string", description: "Target server name (optional, uses default server)" },
+      },
+    },
+    execute: async (_id: string, params: Record<string, unknown>) => {
       try {
-        return textResult(await client.get("/api/notifications"));
+        return textResult(await getClient(params.server as string | undefined).get("/api/notifications"));
       } catch (err) {
         return errorResult(err);
       }
@@ -26,10 +31,11 @@ export function registerNotificationTools(api: any, client: UnraidClient): void 
         subject: { type: "string", description: "Notification subject" },
         description: { type: "string", description: "Notification body text" },
         importance: { type: "string", description: "Importance level: alert, warning, or normal" },
+        server: { type: "string", description: "Target server name (optional, uses default server)" },
       },
       required: ["title", "subject", "description"],
     },
-    execute: async (_id, params) => {
+    execute: async (_id: string, params: Record<string, unknown>) => {
       try {
         const body: Record<string, string> = {
           title: params.title as string,
@@ -37,7 +43,7 @@ export function registerNotificationTools(api: any, client: UnraidClient): void 
           description: params.description as string,
         };
         if (params.importance) body.importance = params.importance as string;
-        return textResult(await client.post("/api/notifications", body));
+        return textResult(await getClient(params.server as string | undefined).post("/api/notifications", body));
       } catch (err) {
         return errorResult(err);
       }
@@ -51,12 +57,13 @@ export function registerNotificationTools(api: any, client: UnraidClient): void 
       type: "object",
       properties: {
         id: { type: "string", description: "Notification ID" },
+        server: { type: "string", description: "Target server name (optional, uses default server)" },
       },
       required: ["id"],
     },
-    execute: async (_id, params) => {
+    execute: async (_id: string, params: Record<string, unknown>) => {
       try {
-        return textResult(await client.post(`/api/notifications/${params.id}/archive`));
+        return textResult(await getClient(params.server as string | undefined).post(`/api/notifications/${params.id}/archive`));
       } catch (err) {
         return errorResult(err);
       }
@@ -70,12 +77,13 @@ export function registerNotificationTools(api: any, client: UnraidClient): void 
       type: "object",
       properties: {
         id: { type: "string", description: "Notification ID" },
+        server: { type: "string", description: "Target server name (optional, uses default server)" },
       },
       required: ["id"],
     },
-    execute: async (_id, params) => {
+    execute: async (_id: string, params: Record<string, unknown>) => {
       try {
-        return textResult(await client.delete(`/api/notifications/${params.id}`));
+        return textResult(await getClient(params.server as string | undefined).delete(`/api/notifications/${params.id}`));
       } catch (err) {
         return errorResult(err);
       }

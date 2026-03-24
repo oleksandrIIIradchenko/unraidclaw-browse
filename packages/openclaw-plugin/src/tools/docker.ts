@@ -1,15 +1,20 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-import type { UnraidClient } from "../client.js";
+import type { ClientResolver } from "../index.js";
 import { textResult, errorResult } from "./util.js";
 
-export function registerDockerTools(api: any, client: UnraidClient): void {
+export function registerDockerTools(api: any, getClient: ClientResolver): void {
   api.registerTool({
     name: "unraid_docker_list",
     description: "List all Docker containers on the Unraid server with their current state, image, and status.",
-    parameters: { type: "object", properties: {} },
-    execute: async () => {
+    parameters: {
+      type: "object",
+      properties: {
+        server: { type: "string", description: "Target server name (optional, uses default server)" },
+      },
+    },
+    execute: async (_id: string, params: Record<string, unknown>) => {
       try {
-        return textResult(await client.get("/api/docker/containers"));
+        return textResult(await getClient(params.server as string | undefined).get("/api/docker/containers"));
       } catch (err) {
         return errorResult(err);
       }
@@ -23,12 +28,13 @@ export function registerDockerTools(api: any, client: UnraidClient): void {
       type: "object",
       properties: {
         id: { type: "string", description: "Container ID or name" },
+        server: { type: "string", description: "Target server name (optional, uses default server)" },
       },
       required: ["id"],
     },
-    execute: async (_id, params) => {
+    execute: async (_id: string, params: Record<string, unknown>) => {
       try {
-        return textResult(await client.get(`/api/docker/containers/${params.id}`));
+        return textResult(await getClient(params.server as string | undefined).get(`/api/docker/containers/${params.id}`));
       } catch (err) {
         return errorResult(err);
       }
@@ -44,115 +50,49 @@ export function registerDockerTools(api: any, client: UnraidClient): void {
         id: { type: "string", description: "Container ID or name" },
         tail: { type: "number", description: "Number of lines from the end (default: 100)" },
         since: { type: "string", description: "Show logs since timestamp (e.g., 2024-01-01T00:00:00Z)" },
+        server: { type: "string", description: "Target server name (optional, uses default server)" },
       },
       required: ["id"],
     },
-    execute: async (_id, params) => {
+    execute: async (_id: string, params: Record<string, unknown>) => {
       try {
         const query: Record<string, string> = {};
         if (params.tail) query.tail = String(params.tail);
         if (params.since) query.since = String(params.since);
-        return textResult(await client.get(`/api/docker/containers/${params.id}/logs`, query));
+        return textResult(await getClient(params.server as string | undefined).get(`/api/docker/containers/${params.id}/logs`, query));
       } catch (err) {
         return errorResult(err);
       }
     },
   });
 
-  api.registerTool({
-    name: "unraid_docker_start",
-    description: "Start a stopped Docker container.",
-    parameters: {
-      type: "object",
-      properties: {
-        id: { type: "string", description: "Container ID or name" },
+  for (const [toolName, desc, action] of [
+    ["unraid_docker_start", "Start a stopped Docker container.", "start"],
+    ["unraid_docker_stop", "Stop a running Docker container.", "stop"],
+    ["unraid_docker_restart", "Restart a Docker container.", "restart"],
+    ["unraid_docker_pause", "Pause a running Docker container (freeze all processes).", "pause"],
+    ["unraid_docker_unpause", "Unpause a paused Docker container.", "unpause"],
+  ] as const) {
+    api.registerTool({
+      name: toolName,
+      description: desc,
+      parameters: {
+        type: "object",
+        properties: {
+          id: { type: "string", description: "Container ID or name" },
+          server: { type: "string", description: "Target server name (optional, uses default server)" },
+        },
+        required: ["id"],
       },
-      required: ["id"],
-    },
-    execute: async (_id, params) => {
-      try {
-        return textResult(await client.post(`/api/docker/containers/${params.id}/start`));
-      } catch (err) {
-        return errorResult(err);
-      }
-    },
-  });
-
-  api.registerTool({
-    name: "unraid_docker_stop",
-    description: "Stop a running Docker container.",
-    parameters: {
-      type: "object",
-      properties: {
-        id: { type: "string", description: "Container ID or name" },
+      execute: async (_id: string, params: Record<string, unknown>) => {
+        try {
+          return textResult(await getClient(params.server as string | undefined).post(`/api/docker/containers/${params.id}/${action}`));
+        } catch (err) {
+          return errorResult(err);
+        }
       },
-      required: ["id"],
-    },
-    execute: async (_id, params) => {
-      try {
-        return textResult(await client.post(`/api/docker/containers/${params.id}/stop`));
-      } catch (err) {
-        return errorResult(err);
-      }
-    },
-  });
-
-  api.registerTool({
-    name: "unraid_docker_restart",
-    description: "Restart a Docker container.",
-    parameters: {
-      type: "object",
-      properties: {
-        id: { type: "string", description: "Container ID or name" },
-      },
-      required: ["id"],
-    },
-    execute: async (_id, params) => {
-      try {
-        return textResult(await client.post(`/api/docker/containers/${params.id}/restart`));
-      } catch (err) {
-        return errorResult(err);
-      }
-    },
-  });
-
-  api.registerTool({
-    name: "unraid_docker_pause",
-    description: "Pause a running Docker container (freeze all processes).",
-    parameters: {
-      type: "object",
-      properties: {
-        id: { type: "string", description: "Container ID or name" },
-      },
-      required: ["id"],
-    },
-    execute: async (_id, params) => {
-      try {
-        return textResult(await client.post(`/api/docker/containers/${params.id}/pause`));
-      } catch (err) {
-        return errorResult(err);
-      }
-    },
-  });
-
-  api.registerTool({
-    name: "unraid_docker_unpause",
-    description: "Unpause a paused Docker container.",
-    parameters: {
-      type: "object",
-      properties: {
-        id: { type: "string", description: "Container ID or name" },
-      },
-      required: ["id"],
-    },
-    execute: async (_id, params) => {
-      try {
-        return textResult(await client.post(`/api/docker/containers/${params.id}/unpause`));
-      } catch (err) {
-        return errorResult(err);
-      }
-    },
-  });
+    });
+  }
 
   api.registerTool({
     name: "unraid_docker_remove",
@@ -162,13 +102,14 @@ export function registerDockerTools(api: any, client: UnraidClient): void {
       properties: {
         id: { type: "string", description: "Container ID or name" },
         force: { type: "boolean", description: "Stop the container before removing (default: false)" },
+        server: { type: "string", description: "Target server name (optional, uses default server)" },
       },
       required: ["id"],
     },
-    execute: async (_id, params) => {
+    execute: async (_id: string, params: Record<string, unknown>) => {
       try {
         const query = params.force ? "?force=true" : "";
-        return textResult(await client.delete(`/api/docker/containers/${params.id}${query}`));
+        return textResult(await getClient(params.server as string | undefined).delete(`/api/docker/containers/${params.id}${query}`));
       } catch (err) {
         return errorResult(err);
       }
@@ -205,12 +146,14 @@ export function registerDockerTools(api: any, client: UnraidClient): void {
           description: "Restart policy (default: unless-stopped)",
         },
         network: { type: "string", description: "Network to attach the container to" },
+        server: { type: "string", description: "Target server name (optional, uses default server)" },
       },
       required: ["image"],
     },
-    execute: async (_id, params) => {
+    execute: async (_id: string, params: Record<string, unknown>) => {
       try {
-        return textResult(await client.post("/api/docker/containers", params));
+        const { server, ...body } = params;
+        return textResult(await getClient(server as string | undefined).post("/api/docker/containers", body));
       } catch (err) {
         return errorResult(err);
       }
