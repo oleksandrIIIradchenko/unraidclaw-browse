@@ -18,13 +18,15 @@
 
 ## 📋 About
 
-**UnraidClaw Browse** is a custom fork of [UnraidClaw](https://github.com/emaspa/unraidclaw) by [@emaspa](https://github.com/emaspa).
+**UnraidClaw Browse** is a **custom fork** of [UnraidClaw](https://github.com/emaspa/unraidclaw) by [@emaspa](https://github.com/emaspa).
+
+**🧠 Code written by AI** (Claude / GPT) — this plugin was created and customized using artificial intelligence.
 
 This fork adds **read-only browse APIs** for disks and shares, allowing AI agents to explore the filesystem hierarchy on your Unraid server.
 
 All other features are identical to the original UnraidClaw.
 
-### What's added in this fork
+### 🆕 What's added in this fork
 
 | Tool | Description |
 |------|-------------|
