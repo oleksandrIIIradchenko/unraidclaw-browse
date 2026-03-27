@@ -1,4 +1,4 @@
-/* UnraidClaw - WebGUI JavaScript v2 */
+/* UnraidClaw Browse - WebGUI JavaScript v2 */
 
 // ── Permission presets (mirror of shared/permissions.ts) ──
 var OCC_PRESETS = {

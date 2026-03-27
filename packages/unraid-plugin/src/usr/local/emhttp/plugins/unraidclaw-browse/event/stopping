@@ -1,3 +1,3 @@
 #!/bin/bash
-# No-op: UnraidClaw stays running regardless of array state.
+# No-op: UnraidClaw Browse stays running regardless of array state.
 # Most tools (docker, system, notifications, logs, network) don't need the array.
