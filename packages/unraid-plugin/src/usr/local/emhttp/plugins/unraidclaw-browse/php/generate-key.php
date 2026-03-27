@@ -14,7 +14,8 @@ function respond($data) {
 }
 
 try {
-    $cfgFile = '/boot/config/plugins/unraidclaw/unraidclaw.cfg';
+    $plugin = 'unraidclaw-browse';
+    $cfgFile = '/boot/config/plugins/' . $plugin . '/' . $plugin . '.cfg';
 
     // Generate a 32-byte random key
     $rawKey = bin2hex(random_bytes(32));

@@ -6,7 +6,7 @@ header('Content-Type: application/json');
 $docroot = $docroot ?? $_SERVER['DOCUMENT_ROOT'] ?? '/usr/local/emhttp';
 require_once "$docroot/webGui/include/Wrappers.php";
 
-$logFile = '/boot/config/plugins/unraidclaw/activity.jsonl';
+$logFile = '/boot/config/plugins/unraidclaw-browse/activity.jsonl';
 
 if (file_exists($logFile)) {
     file_put_contents($logFile, '');

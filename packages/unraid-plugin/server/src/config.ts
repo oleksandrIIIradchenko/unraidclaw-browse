@@ -14,8 +14,8 @@ export interface ServerConfig {
   tlsKey: string;
 }
 
-const FLASH_BASE = process.env.FLASH_BASE ?? "/boot/config/plugins/unraidclaw";
-const CFG_FILE = join(FLASH_BASE, "unraidclaw.cfg");
+const FLASH_BASE = process.env.FLASH_BASE ?? "/boot/config/plugins/unraidclaw-browse";
+const CFG_FILE = join(FLASH_BASE, "unraidclaw-browse.cfg");
 const PERMISSIONS_FILE = join(FLASH_BASE, "permissions.json");
 
 function ensureFlashDir(): void {
