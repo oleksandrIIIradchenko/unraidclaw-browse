@@ -58,7 +58,6 @@ All other features are identical to the original UnraidClaw.
 ### Manual install
 
 ```bash
-# Download and install the plugin
 plugin install https://raw.githubusercontent.com/oleksandrIIIradchenko/unraidclaw-browse/main/packages/unraid-plugin/unraidclaw-browse.plg
 ```
 
