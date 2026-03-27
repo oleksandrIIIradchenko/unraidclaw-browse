@@ -109,6 +109,6 @@ describe('config', () => {
     const mod = await import('./config.js');
     const matrix = mod.loadPermissions();
     expect(matrix['docker:read']).toBe(true);
-    expect((matrix)['fake:perm']).toBeUndefined();
+    expect((matrix as Record<string, boolean | undefined>)['fake:perm']).toBeUndefined();
   });
 });
