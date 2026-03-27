@@ -42,6 +42,35 @@ export function registerShareTools(api: any, getClient: ClientResolver): void {
   });
 
   api.registerTool({
+    name: "unraid_share_browse",
+    description: "Browse a user share directory tree (read-only). Lists folders/files under the share root or a relative path.",
+    parameters: {
+      type: "object",
+      properties: {
+        name: { type: "string", description: "Share name" },
+        path: { type: "string", description: "Relative path inside the share, default '/'" },
+        limit: { type: "number", description: "Max entries to return (default 200, max 1000)" },
+        includeHidden: { type: "boolean", description: "Include dotfiles/directories" },
+        dirsOnly: { type: "boolean", description: "Return directories only" },
+        server: { type: "string", description: "Target server name (optional, uses default server)" },
+      },
+      required: ["name"],
+    },
+    execute: async (_id: string, params: Record<string, unknown>) => {
+      try {
+        const query: Record<string, string> = {};
+        if (params.path !== undefined) query.path = String(params.path);
+        if (params.limit !== undefined) query.limit = String(params.limit);
+        if (params.includeHidden !== undefined) query.includeHidden = String(params.includeHidden);
+        if (params.dirsOnly !== undefined) query.dirsOnly = String(params.dirsOnly);
+        return textResult(await getClient(params.server as string | undefined).get(`/api/shares/${params.name}/browse`, query));
+      } catch (err) {
+        return errorResult(err);
+      }
+    },
+  });
+
+  api.registerTool({
     name: "unraid_share_update",
     description: "Update safe settings for a user share. Only affects metadata and future write behavior -- does not move existing data.",
     parameters: {

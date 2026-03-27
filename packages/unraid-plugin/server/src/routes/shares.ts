@@ -4,6 +4,7 @@ import { Resource, Action } from "@unraidclaw/shared";
 import type { UpdateShareRequest } from "@unraidclaw/shared";
 import type { GraphQLClient } from "../graphql-client.js";
 import { requirePermission } from "../permissions.js";
+import { listDirectory } from "../fs-browse.js";
 
 const SHARES_DIR = "/boot/config/shares";
 
@@ -96,6 +97,38 @@ export function registerShareRoutes(app: FastifyInstance, gql: GraphQLClient): v
         ...(typeof share.size === "number" ? { sizeHuman: humanSize(share.size as number) } : {}),
       };
       return reply.send({ ok: true, data: enriched });
+    },
+  });
+
+  // Browse share contents (read-only)
+  app.get<{ Params: { name: string }; Querystring: { path?: string; limit?: string; includeHidden?: string; dirsOnly?: string } }>("/api/shares/:name/browse", {
+    preHandler: requirePermission(Resource.SHARE, Action.READ),
+    handler: async (req, reply) => {
+      const data = await gql.query<{ shares: Array<Record<string, unknown> & { name: string }> }>(LIST_QUERY);
+      const share = data.shares.find((s) => s.name.toLowerCase() === req.params.name.toLowerCase());
+      if (!share) {
+        return reply.code(404).send({
+          ok: false,
+          error: { code: "NOT_FOUND", message: `Share '${req.params.name}' not found` },
+        });
+      }
+
+      try {
+        const result = await listDirectory(`/mnt/user/${share.name}`, req.query.path ?? "/", {
+          limit: req.query.limit ? Number(req.query.limit) : undefined,
+          includeHidden: req.query.includeHidden === "true",
+          dirsOnly: req.query.dirsOnly === "true",
+        });
+        return reply.send({ ok: true, data: result });
+      } catch (err) {
+        const e = err as Error & { code?: string };
+        const code = e.code ?? "BROWSE_ERROR";
+        const status = code === "NOT_DIRECTORY" ? 400 : code === "INVALID_PATH" ? 400 : code === "ENOENT" ? 404 : 500;
+        return reply.code(status).send({
+          ok: false,
+          error: { code, message: e.message },
+        });
+      }
     },
   });
 

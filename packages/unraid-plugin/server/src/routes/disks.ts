@@ -4,6 +4,7 @@ import { promisify } from "node:util";
 import { Resource, Action } from "@unraidclaw/shared";
 import type { GraphQLClient } from "../graphql-client.js";
 import { requirePermission } from "../permissions.js";
+import { listDirectory } from "../fs-browse.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -90,6 +91,44 @@ export function registerDiskRoutes(app: FastifyInstance, gql: GraphQLClient): vo
       const usage = await getDiskUsage();
       const allDisks = [...data.array.disks, ...data.array.parities].map((d) => enrichDisk(d, usage));
       return reply.send({ ok: true, data: allDisks });
+    },
+  });
+
+  // Browse disk contents (read-only)
+  app.get<{ Params: { id: string }; Querystring: { path?: string; limit?: string; includeHidden?: string; dirsOnly?: string } }>("/api/disks/:id/browse", {
+    preHandler: requirePermission(Resource.DISK, Action.READ),
+    handler: async (req, reply) => {
+      const data = await gql.query<{
+        array: {
+          disks: Array<Record<string, unknown> & { name: string }>;
+          parities: Array<Record<string, unknown> & { name: string }>;
+        };
+      }>(LIST_QUERY);
+      const allDisks = [...data.array.disks, ...data.array.parities];
+      const disk = allDisks.find((d) => d.name.toLowerCase() === req.params.id.toLowerCase());
+      if (!disk) {
+        return reply.code(404).send({
+          ok: false,
+          error: { code: "NOT_FOUND", message: `Disk '${req.params.id}' not found` },
+        });
+      }
+
+      try {
+        const result = await listDirectory(`/mnt/${disk.name}`, req.query.path ?? "/", {
+          limit: req.query.limit ? Number(req.query.limit) : undefined,
+          includeHidden: req.query.includeHidden === "true",
+          dirsOnly: req.query.dirsOnly === "true",
+        });
+        return reply.send({ ok: true, data: result });
+      } catch (err) {
+        const e = err as Error & { code?: string };
+        const code = e.code ?? "BROWSE_ERROR";
+        const status = code === "NOT_DIRECTORY" ? 400 : code === "INVALID_PATH" ? 400 : code === "ENOENT" ? 404 : 500;
+        return reply.code(status).send({
+          ok: false,
+          error: { code, message: e.message },
+        });
+      }
     },
   });
 

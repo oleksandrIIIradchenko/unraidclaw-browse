@@ -1,19 +1,23 @@
 <?xml version='1.0' standalone='yes'?>
 
 <!DOCTYPE PLUGIN [
-<!ENTITY name      "unraidclaw">
+<!ENTITY name      "unraidclaw-browse">
 <!ENTITY author    "emaspa">
-<!ENTITY version   "0.1.27">
-<!ENTITY launch    "Settings/unraidclaw">
-<!ENTITY repo      "emaspa/unraidclaw">
-<!ENTITY pluginURL "https://raw.githubusercontent.com/&repo;/main/packages/unraid-plugin/unraidclaw.plg">
+<!ENTITY version   "0.1.28-browse1">
+<!ENTITY launch    "Settings/unraidclaw-browse">
+<!ENTITY repo      "oleksandrIIIradchenko/unraidclaw">
+<!ENTITY pluginURL "https://raw.githubusercontent.com/&repo;/main/packages/unraid-plugin/unraidclaw-browse.plg">
 <!ENTITY pkgURL    "https://github.com/&repo;/releases/download/v&version;/&name;-&version;-x86_64-1.txz">
-<!ENTITY md5       "449a27c1b971857b63bae367d44a5cbe">
+<!ENTITY md5       "b4e38b1d61fb349229d5dcce8f08e7e6">
 ]>
 
-<PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.12.0" max="7.99.99" support="https://forums.unraid.net/topic/197498-plugin-support-unraidclaw-ai-agent-gateway-with-permission-control/" description="Permission-enforcing REST API gateway that lets AI agents manage your Unraid server with fine-grained access control.">
+<PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" min="6.12.0" max="7.99.99" support="https://forums.unraid.net/topic/197498-plugin-support-unraidclaw-browse-ai-agent-gateway-with-permission-control/" description="Permission-enforcing REST API gateway that lets AI agents manage your Unraid server with fine-grained access control.">
 
 <CHANGES>
+### 0.1.28-browse1
+- Add read-only browse APIs for disks and shares
+- Add OpenClaw tools unraid_disk_browse and unraid_share_browse
+
 ### 0.1.27
 - Add memory stats (total, used, free, percent) to /api/system/info and /api/system/metrics
 - Add CPU load averages (1m, 5m, 15m) to /api/system/info and /api/system/metrics
@@ -96,7 +100,7 @@
 </CHANGES>
 
 <README>
-**UnraidClaw** is a permission-enforcing REST API gateway that lets AI agents manage your Unraid server.
+**UnraidClaw Browse** is a permission-enforcing REST API gateway that lets AI agents manage your Unraid server.
 
 It proxies requests to Unraid's built-in GraphQL API with fine-grained access control, so you can safely expose Docker, VMs, Array, Shares, System, Notifications, and Network management to AI tools.
 
@@ -156,15 +160,15 @@ CFG_DIR="/boot/config/plugins/${PLUGIN}"
 mkdir -p "$CFG_DIR"
 
 # Create default config if not present
-if [ ! -f "${CFG_DIR}/unraidclaw.cfg" ]; then
-  cat > "${CFG_DIR}/unraidclaw.cfg" &lt;&lt; 'CFGEOF'
+if [ ! -f "${CFG_DIR}/unraidclaw-browse.cfg" ]; then
+  cat > "${CFG_DIR}/unraidclaw-browse.cfg" &lt;&lt; 'CFGEOF'
 SERVICE="disable"
 PORT="9876"
 HOST="0.0.0.0"
 API_KEY_HASH=""
 GRAPHQL_URL="http://localhost/graphql"
 UNRAID_API_KEY=""
-LOG_FILE="/boot/config/plugins/unraidclaw/activity.jsonl"
+LOG_FILE="/boot/config/plugins/unraidclaw-browse/activity.jsonl"
 MAX_LOG_SIZE="10485760"
 CFGEOF
   echo "Created default config."
@@ -181,7 +185,7 @@ chmod +x /etc/rc.d/rc.${PLUGIN} 2>/dev/null
 chmod +x /usr/local/emhttp/plugins/${PLUGIN}/event/* 2>/dev/null
 
 # Restart service if it was running, or start if enabled
-CONFIG="${CFG_DIR}/unraidclaw.cfg"
+CONFIG="${CFG_DIR}/unraidclaw-browse.cfg"
 if /etc/rc.d/rc.${PLUGIN} status >/dev/null 2>/dev/null; then
   echo "Restarting ${PLUGIN} service after upgrade..."
   /etc/rc.d/rc.${PLUGIN} restart

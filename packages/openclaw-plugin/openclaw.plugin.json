@@ -1,16 +1,16 @@
 {
-  "id": "unraidclaw",
+  "id": "unraidclaw-browse",
   "configSchema": {
     "type": "object",
     "additionalProperties": false,
     "properties": {
       "serverUrl": {
         "type": "string",
-        "description": "URL of the UnraidClaw server (single-server mode)"
+        "description": "URL of the UnraidClaw Browse server (single-server mode)"
       },
       "apiKey": {
         "type": "string",
-        "description": "API key for authenticating with UnraidClaw (single-server mode)"
+        "description": "API key for authenticating with UnraidClaw Browse (single-server mode)"
       },
       "tlsSkipVerify": {
         "type": "boolean",
@@ -19,7 +19,7 @@
       },
       "servers": {
         "type": "array",
-        "description": "Multiple UnraidClaw servers (multi-server mode)",
+        "description": "Multiple UnraidClaw Browse servers (multi-server mode)",
         "items": {
           "type": "object",
           "properties": {
@@ -29,7 +29,7 @@
             },
             "serverUrl": {
               "type": "string",
-              "description": "URL of the UnraidClaw server"
+              "description": "URL of the UnraidClaw Browse server"
             },
             "apiKey": {
               "type": "string",

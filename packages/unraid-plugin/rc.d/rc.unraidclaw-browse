@@ -1,10 +1,10 @@
 #!/bin/bash
 #
-# rc.unraidclaw - Start/stop/restart/status for unraidclaw
+# rc.unraidclaw-browse - Start/stop/restart/status for unraidclaw-browse
 #
 
-PLUGIN="unraidclaw"
-CONFIG="/boot/config/plugins/${PLUGIN}/unraidclaw.cfg"
+PLUGIN="unraidclaw-browse"
+CONFIG="/boot/config/plugins/${PLUGIN}/unraidclaw-browse.cfg"
 SERVER="/usr/local/emhttp/plugins/${PLUGIN}/server/index.cjs"
 PIDFILE="/var/run/${PLUGIN}.pid"
 LOGFILE="/var/log/${PLUGIN}.log"
@@ -50,7 +50,7 @@ start() {
     mkdir -p "$TLS_DIR"
     openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 \
       -keyout "$TLS_DIR/key.pem" -out "$TLS_DIR/cert.pem" \
-      -days 3650 -nodes -subj "/CN=unraidclaw" 2>/dev/null
+      -days 3650 -nodes -subj "/CN=unraidclaw-browse" 2>/dev/null
     chmod 600 "$TLS_DIR/key.pem"
     chmod 644 "$TLS_DIR/cert.pem"
   fi
