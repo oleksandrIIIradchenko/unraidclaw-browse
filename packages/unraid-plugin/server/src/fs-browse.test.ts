@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, mkdirSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -27,6 +27,15 @@ describe('fs-browse', () => {
   it('rejects path traversal', async () => {
     const root = makeTree();
     await expect(safeResolveUnderRoot(root, '/../etc')).rejects.toMatchObject({ code: 'INVALID_PATH' });
+    await expect(safeResolveUnderRoot(root, '..\\etc')).rejects.toMatchObject({ code: 'INVALID_PATH' });
+  });
+
+  it('rejects symlink escapes outside root', async () => {
+    const root = makeTree();
+    const outside = mkdtempSync(join(tmpdir(), 'uclaw-outside-'));
+    created.push(outside);
+    symlinkSync(outside, join(root, 'escape-link'));
+    await expect(safeResolveUnderRoot(root, '/escape-link')).rejects.toMatchObject({ code: 'INVALID_PATH' });
   });
 
   it('lists directories first and hides dotfiles by default', async () => {
