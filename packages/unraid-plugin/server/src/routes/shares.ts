@@ -101,7 +101,7 @@ export function registerShareRoutes(app: FastifyInstance, gql: GraphQLClient): v
   });
 
   // Browse share contents (read-only)
-  app.get<{ Params: { name: string }; Querystring: { path?: string; limit?: string; includeHidden?: string; dirsOnly?: string } }>("/api/shares/:name/browse", {
+  app.get<{ Params: { name: string }; Querystring: { path?: string; limit?: string; offset?: string; includeHidden?: string; dirsOnly?: string; sortBy?: 'name' | 'size' | 'mtime'; order?: 'asc' | 'desc' } }>("/api/shares/:name/browse", {
     preHandler: requirePermission(Resource.SHARE, Action.READ),
     handler: async (req, reply) => {
       const data = await gql.query<{ shares: Array<Record<string, unknown> & { name: string }> }>(LIST_QUERY);
@@ -116,13 +116,17 @@ export function registerShareRoutes(app: FastifyInstance, gql: GraphQLClient): v
       try {
         const result = await listDirectory(`/mnt/user/${share.name}`, req.query.path ?? "/", {
           limit: req.query.limit ? Number(req.query.limit) : undefined,
+          offset: req.query.offset ? Number(req.query.offset) : undefined,
           includeHidden: req.query.includeHidden === "true",
           dirsOnly: req.query.dirsOnly === "true",
+          sortBy: req.query.sortBy,
+          order: req.query.order,
         });
         return reply.send({ ok: true, data: result });
       } catch (err) {
         const e = err as Error & { code?: string };
         const code = e.code ?? "BROWSE_ERROR";
+        (req as typeof req & { auditReason?: string }).auditReason = code;
         const status = code === "NOT_DIRECTORY" ? 400 : code === "INVALID_PATH" ? 400 : code === "ENOENT" ? 404 : 500;
         return reply.code(status).send({
           ok: false,

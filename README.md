@@ -1,289 +1,157 @@
 <p align="center">
-  <img src="packages/unraid-plugin/src/usr/local/emhttp/plugins/unraidclaw/unraidclaw.png" width="96" alt="UnraidClaw logo" />
+  <img src="README_logo.png" width="96" alt="UnraidClaw Browse logo" />
 </p>
 
-<h1 align="center">UnraidClaw</h1>
+<h1 align="center">UnraidClaw Browse</h1>
 
 <p align="center">
-  AI Agent Gateway for Unraid. Permission-enforcing REST API that lets AI agents manage your server.
+  AI Agent Gateway for Unraid with extended browse APIs — permission-enforcing REST API for managing your server.
 </p>
 
 <p align="center">
-  <a href="https://github.com/emaspa/unraidclaw/releases"><img src="https://img.shields.io/github/v/release/emaspa/unraidclaw" alt="Release" /></a>
-  <a href="https://www.npmjs.com/package/unraidclaw"><img src="https://img.shields.io/npm/v/unraidclaw" alt="npm" /></a>
   <img src="https://img.shields.io/badge/unraid-7.0%2B-orange" alt="Unraid 7.0+" />
   <img src="https://img.shields.io/badge/node-22%2B-green" alt="Node 22+" />
+  <a href="https://github.com/oleksandrIIIradchenko/unraidclaw-browse/releases"><img src="https://img.shields.io/github/v/release/oleksandrIIIradchenko/unraidclaw-browse" alt="Release" /></a>
+  <a href="https://donatello.to/oleksandrIIIradchenko"><img src="https://img.shields.io/badge/Donate-Buy%20me%20a%20coffee-ff5f5f5?style=flat&logo=buy-me-a-coffee" alt="Donate" /></a>
 </p>
 
 ---
 
-UnraidClaw sits between AI agents and your Unraid servers, providing a unified REST API with fine-grained access control. It combines Unraid's GraphQL API with direct system integration (CLI commands for parity checks, reboot/shutdown, and syslog; filesystem operations for share config editing and notification management; network introspection via `ip`) to expose capabilities that no single Unraid API covers. Every call is authenticated, authorized against a configurable permission matrix, and logged.
+## 📋 About
+
+**UnraidClaw Browse** is a **custom fork** of [UnraidClaw](https://github.com/emaspa/unraidclaw) by [@emaspa](https://github.com/emaspa).
+
+**🧠 Code written by AI** (Claude / GPT) — this plugin was created and customized using artificial intelligence.
+
+This fork adds **read-only browse APIs** for disks and shares, allowing AI agents to explore the filesystem hierarchy on your Unraid server.
+
+All other features are identical to the original UnraidClaw.
+
+### 🆕 What's added in this fork
+
+| Tool / API | Description |
+|------|-------------|
+| `unraid_disk_browse` | Browse disk filesystem hierarchy (read-only) |
+| `unraid_share_browse` | Browse share filesystem hierarchy (read-only) |
+| `GET /api/disks/:id/browse` | Browse disk contents with sorting / pagination metadata |
+| `GET /api/shares/:name/browse` | Browse share contents with sorting / pagination metadata |
+
+---
 
 ## Features
 
-- **43 tools** across 11 categories: Docker, VMs, Array, Disks, Shares, System, Notifications, Network, Users, Logs
+- **43+ tools** across Docker, VMs, Array, Disks, Shares, System, Notifications, Network, Users, Logs
+- **Browse APIs** for disks and shares with:
+  - breadcrumbs metadata
+  - sorting (`name`, `size`, `mtime`)
+  - pagination (`limit`, `offset`)
+  - richer browse response metadata (`total`, `truncated`, etc.)
 - **22 permission keys** in a resource:action matrix, configurable from the WebGUI
 - **HTTPS** with auto-generated self-signed TLS certificate
 - **SHA-256 API key** authentication
-- **Activity logging** with JSONL format, filter, and search
-- **OpenClaw plugin** available on npm (`openclaw plugins install unraidclaw`)
-- **Single-file server**, no `node_modules` needed on Unraid
+- **Activity logging** with JSONL format
+- **Basic browse hardening**:
+  - path traversal rejection
+  - symlink escape rejection
+  - max path length guard
+  - basic browse rate limiting
+- **Unit tests + smoke checks + CI workflows** are now included
+- **OpenClaw plugin** available on npm
+
+---
 
 ## Requirements
 
 - **Unraid 7.0.0+** (Node.js 22 is built-in)
 
+---
+
 ## Installation
 
-### From Community Applications
+### Via WebGUI
+1. Go to **Settings → Plugin Management**
+2. Click **Install** and paste this URL:
+```
+https://raw.githubusercontent.com/oleksandrIIIradchenko/unraidclaw-browse/main/packages/unraid-plugin/unraidclaw-browse.plg
+```
 
-Search for **UnraidClaw** in the Unraid CA store and click Install.
-
-### Manual install
+### Via Console
 
 ```bash
-# Download and install the plugin
-plugin install https://raw.githubusercontent.com/emaspa/unraidclaw/main/packages/unraid-plugin/unraidclaw.plg
+wget https://raw.githubusercontent.com/oleksandrIIIradchenko/unraidclaw-browse/main/packages/unraid-plugin/unraidclaw-browse.plg -O /tmp/unraidclaw-browse.plg
+installplg /tmp/unraidclaw-browse.plg
 ```
 
 ### Setup
 
 1. Go to **Settings > Management Access** in the Unraid WebGUI, scroll to the API section, and copy your Unraid API key (must have **ADMIN** role)
-2. Go to **Settings > UnraidClaw**, paste the Unraid API key into the **Unraid API Key** field
-3. Generate an UnraidClaw API key (it's hashed with SHA-256; save it, it won't be shown again)
+2. Go to **Settings > UnraidClaw Browse**, paste the Unraid API key into the **Unraid API Key** field
+3. Generate an API key (it's hashed with SHA-256; save it, it won't be shown again)
 4. Configure permissions on the **Permissions** tab
 5. Set Service to **Enabled** and click Apply
 
-The server starts on port `9876` over HTTPS by default. A self-signed TLS certificate is auto-generated on first start.
+The server starts on port `9876` over HTTPS by default.
 
-## API
+---
 
-All endpoints return a consistent envelope:
+## New Browse APIs
 
-```json
-{
-  "ok": true,
-  "data": { ... }
-}
-```
-
-Authentication via `x-api-key: <api-key>` header.
-
-### Endpoints
-
-| Category | Method | Endpoint | Permission |
-|----------|--------|----------|------------|
-| **Health** | GET | `/api/health` | none |
-| **Docker** | GET | `/api/docker/containers` | `docker:read` |
-| | GET | `/api/docker/containers/:id` | `docker:read` |
-| | GET | `/api/docker/containers/:id/logs` | `docker:read` |
-| | POST | `/api/docker/containers` | `docker:create` |
-| | POST | `/api/docker/containers/:id/:action` | `docker:update` |
-| | DELETE | `/api/docker/containers/:id` | `docker:delete` |
-| **VMs** | GET | `/api/vms` | `vms:read` |
-| | GET | `/api/vms/:id` | `vms:read` |
-| | POST | `/api/vms/:id/:action` | `vms:update` |
-| | DELETE | `/api/vms/:id` | `vms:delete` |
-| **Array** | GET | `/api/array/status` | `array:read` |
-| | GET | `/api/array/parity/status` | `array:read` |
-| | POST | `/api/array/start` | `array:update` |
-| | POST | `/api/array/stop` | `array:update` |
-| | POST | `/api/array/parity/start` | `array:update` |
-| | POST | `/api/array/parity/pause` | `array:update` |
-| | POST | `/api/array/parity/resume` | `array:update` |
-| | POST | `/api/array/parity/cancel` | `array:update` |
-| **Disks** | GET | `/api/disks` | `disk:read` |
-| | GET | `/api/disks/:id` | `disk:read` |
-| **Shares** | GET | `/api/shares` | `share:read` |
-| | GET | `/api/shares/:name` | `share:read` |
-| | PATCH | `/api/shares/:name` | `share:update` |
-| **System** | GET | `/api/system/info` | `info:read` |
-| | GET | `/api/system/metrics` | `info:read` |
-| | GET | `/api/system/services` | `services:read` |
-| | POST | `/api/system/reboot` | `os:update` |
-| | POST | `/api/system/shutdown` | `os:update` |
-| **Notifications** | GET | `/api/notifications` | `notification:read` |
-| | GET | `/api/notifications/overview` | `notification:read` |
-| | POST | `/api/notifications` | `notification:create` |
-| | POST | `/api/notifications/:id/archive` | `notification:update` |
-| | DELETE | `/api/notifications/:id` | `notification:delete` |
-| **Network** | GET | `/api/network` | `network:read` |
-| **Users** | GET | `/api/users/me` | `me:read` |
-| **Logs** | GET | `/api/logs/syslog` | `logs:read` |
-
-### Docker create
-
-`POST /api/docker/containers` accepts:
-
-```json
-{
-  "image": "vikunja/vikunja:latest",
-  "name": "vikunja",
-  "ports": ["3456:3456"],
-  "volumes": ["/mnt/cache/appdata/vikunja:/app/vikunja/files"],
-  "env": ["VIKUNJA_SERVICE_TIMEZONE=Europe/London"],
-  "restart": "unless-stopped",
-  "network": "bridge",
-  "icon": "https://example.com/icon.png",
-  "webui": "http://[IP]:[PORT:3456]/"
-}
-```
-
-Only `image` is required. The container is started immediately and an Unraid dockerMan XML template is created so it appears in the Docker tab.
-
-### Docker actions
-
-`POST /api/docker/containers/:id/:action` where action is one of: `start`, `stop`, `restart`, `pause`, `unpause`
-
-### VM actions
-
-`POST /api/vms/:id/:action` where action is one of: `start`, `stop`, `force-stop`, `pause`, `resume`, `reboot`, `reset`
-
-### Share update
-
-`PATCH /api/shares/:name` accepts:
-
-```json
-{
-  "comment": "My share description",
-  "allocator": "highwater",
-  "splitLevel": "1",
-  "floor": "0"
-}
-```
-
-## OpenClaw Plugin
-
-The [OpenClaw](https://github.com/openclaw/openclaw) plugin exposes all 43 tools to any AI agent that supports the OpenClaw protocol.
-
-### Install
-
-```bash
-openclaw plugins install unraidclaw
-```
-
-### Configure
-
-Edit `~/.openclaw/openclaw.json`:
-
-**Single server:**
-
-```json
-{
-  "plugins": {
-    "allow": ["unraidclaw"],
-    "entries": {
-      "unraidclaw": {
-        "config": {
-          "serverUrl": "https://YOUR_UNRAID_IP:9876",
-          "apiKey": "YOUR_API_KEY",
-          "tlsSkipVerify": true
-        }
-      }
-    }
-  }
-}
-```
-
-**Multiple servers:**
-
-```json
-{
-  "plugins": {
-    "allow": ["unraidclaw"],
-    "entries": {
-      "unraidclaw": {
-        "config": {
-          "servers": [
-            {
-              "name": "home",
-              "serverUrl": "https://192.168.1.100:9876",
-              "apiKey": "...",
-              "tlsSkipVerify": true,
-              "default": true
-            },
-            {
-              "name": "work",
-              "serverUrl": "https://10.0.0.50:9876",
-              "apiKey": "..."
-            }
-          ]
-        }
-      }
-    }
-  }
-}
-```
-
-With multi-server, every tool accepts an optional `server` parameter (e.g. `unraid_docker_list(server: "work")`). If omitted, the default server is used.
-
-Set `tlsSkipVerify: true` when using the auto-generated self-signed certificate.
-
-### Tools
-
-| Category | Tools |
-|----------|-------|
-| Health | `unraid_health_check` |
-| Docker | `unraid_docker_list`, `unraid_docker_inspect`, `unraid_docker_logs`, `unraid_docker_create`, `unraid_docker_start`, `unraid_docker_stop`, `unraid_docker_restart`, `unraid_docker_pause`, `unraid_docker_unpause`, `unraid_docker_remove` |
-| VMs | `unraid_vm_list`, `unraid_vm_inspect`, `unraid_vm_start`, `unraid_vm_stop`, `unraid_vm_pause`, `unraid_vm_resume`, `unraid_vm_force_stop`, `unraid_vm_reboot` |
-| Array | `unraid_array_status`, `unraid_array_start`, `unraid_array_stop`, `unraid_parity_status`, `unraid_parity_start`, `unraid_parity_pause`, `unraid_parity_resume`, `unraid_parity_cancel` |
-| Disks | `unraid_disk_list`, `unraid_disk_details` |
-| Shares | `unraid_share_list`, `unraid_share_details`, `unraid_share_update` |
-| System | `unraid_system_info`, `unraid_system_metrics`, `unraid_service_list`, `unraid_system_reboot`, `unraid_system_shutdown` |
-| Notifications | `unraid_notification_list`, `unraid_notification_create`, `unraid_notification_archive`, `unraid_notification_delete` |
-| Network | `unraid_network_info` |
-| Users | `unraid_user_me` |
-| Logs | `unraid_syslog` |
-
-## Permissions
-
-Permissions use a `resource:action` format. Configure them from the WebGUI Permissions tab or edit `/boot/config/plugins/unraidclaw/permissions.json` directly.
-
-| Category | Permissions |
-|----------|------------|
-| Docker | `docker:read`, `docker:create`, `docker:update`, `docker:delete` |
-| VMs | `vms:read`, `vms:update`, `vms:delete` |
-| Array & Storage | `array:read`, `array:update`, `disk:read`, `share:read`, `share:update` |
-| System | `info:read`, `os:update`, `services:read` |
-| Notifications | `notification:read`, `notification:create`, `notification:update`, `notification:delete` |
-| Network | `network:read` |
-| Users | `me:read` |
-| Logs | `logs:read` |
-
-The WebGUI includes presets: **Read Only**, **Docker Manager**, **VM Manager**, **Full Admin**, and **None**.
-
-## Architecture
+### Browse Disk Filesystem
 
 ```
-                                                        GraphQL ──> Unraid API
-                                                       /            (list queries, array, disks)
-┌─────────────┐     HTTPS      ┌──────────────────┐──+
-│  AI Agent   │ ──────────────> │   UnraidClaw     │   \
-│  (OpenClaw) │   x-api-key    │   (Fastify)      │    CLI ──────> docker, virsh, mdcmd,
-└─────────────┘                 │                  │   /            reboot, ip, ...
-                                │  - Auth          │──+
-                                │  - Permissions   │   \
-                                │  - Activity Log  │    Filesystem > share configs, syslog,
-                                └──────────────────┘                 notifications
+GET /api/disks/:id/browse?path=<directory>
 ```
 
-This is a pnpm monorepo with three packages:
+Returns directory listing with file sizes, modification times, breadcrumbs, sorting info, pagination info, and total entry counts.
 
-| Package | Description |
-|---------|-------------|
-| `packages/shared` | Shared TypeScript types, permission definitions, API interfaces |
-| `packages/unraid-plugin/server` | Fastify REST API server, bundles to a single CJS file |
-| `packages/openclaw-plugin` | OpenClaw plugin, bundles to a single ESM file, published to npm as `unraidclaw` |
+Supported query params:
+- `path`
+- `limit`
+- `offset`
+- `sortBy=name|size|mtime`
+- `order=asc|desc`
+- `includeHidden=true|false`
+- `dirsOnly=true|false`
 
-## Security
+**Permission:** `disk:read`
 
-- API keys are hashed with SHA-256 before storage; the plaintext key is never persisted
-- All requests require authentication via `x-api-key` header
-- Every API call is checked against the permission matrix before execution
-- Activity logging records all requests with timestamps, endpoints, and results
-- HTTPS with auto-generated EC (prime256v1) certificates, 10-year validity
-- The server runs locally on your Unraid box, no cloud dependencies
+### Browse Share Filesystem
+
+```
+GET /api/shares/:name/browse?path=<directory>
+```
+
+Returns directory listing with file sizes, modification times, breadcrumbs, sorting info, pagination info, and total entry counts.
+
+Supported query params:
+- `path`
+- `limit`
+- `offset`
+- `sortBy=name|size|mtime`
+- `order=asc|desc`
+- `includeHidden=true|false`
+- `dirsOnly=true|false`
+
+**Permission:** `share:read`
+
+---
+
+## Original UnraidClaw Documentation
+
+For full API reference, OpenClaw plugin setup, and architecture details, see the [original UnraidClaw README](https://github.com/emaspa/unraidclaw).
+
+---
+
+## 💛 Support
+
+If this plugin was useful to you, consider buying me a coffee:
+
+👉 https://donatello.to/oleksandrIIIradchenko
+
+<img src="donate-qr.png" width="200" alt="Donate QR Code" />
+
+---
 
 ## License
 
-MIT
+MIT — same as the original UnraidClaw project.

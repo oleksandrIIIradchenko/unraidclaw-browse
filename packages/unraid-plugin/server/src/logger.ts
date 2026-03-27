@@ -10,6 +10,7 @@ export interface ActivityLogEntry {
   statusCode: number;
   durationMs: number;
   ip: string;
+  reason?: string;
 }
 
 export class ActivityLogger {

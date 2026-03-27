@@ -16,6 +16,34 @@ import { registerNetworkRoutes } from "./routes/network.js";
 import { registerUserRoutes } from "./routes/users.js";
 import { registerLogRoutes } from "./routes/logs.js";
 
+const BROWSE_RATE_WINDOW_MS = 60_000;
+const BROWSE_RATE_MAX = 120;
+const browseRateMap = new Map<string, { count: number; first: number }>();
+
+function isBrowseRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const entry = browseRateMap.get(ip);
+  if (!entry || now - entry.first > BROWSE_RATE_WINDOW_MS) return false;
+  return entry.count >= BROWSE_RATE_MAX;
+}
+
+function recordBrowseRequest(ip: string): void {
+  const now = Date.now();
+  const entry = browseRateMap.get(ip);
+  if (!entry || now - entry.first > BROWSE_RATE_WINDOW_MS) {
+    browseRateMap.set(ip, { count: 1, first: now });
+  } else {
+    entry.count++;
+  }
+}
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of browseRateMap) {
+    if (now - entry.first > BROWSE_RATE_WINDOW_MS) browseRateMap.delete(ip);
+  }
+}, BROWSE_RATE_WINDOW_MS);
+
 export function createServer(config: ServerConfig, httpsOpts?: { cert: Buffer; key: Buffer }) {
   const app = Fastify({ logger: true, ...(httpsOpts ? { https: httpsOpts } : {}) });
   const gql = new GraphQLClient(config);
@@ -54,6 +82,18 @@ export function createServer(config: ServerConfig, httpsOpts?: { cert: Buffer; k
   // Auth hook
   app.addHook("onRequest", createAuthHook(config));
 
+  app.addHook("onRequest", async (request, reply) => {
+    if (!request.url.includes('/browse')) return;
+    if (isBrowseRateLimited(request.ip)) {
+      (request as typeof request & { auditReason?: string }).auditReason = 'BROWSE_RATE_LIMITED';
+      return reply.code(429).send({
+        ok: false,
+        error: { code: 'BROWSE_RATE_LIMITED', message: 'Too many browse requests. Try again later.' },
+      });
+    }
+    recordBrowseRequest(request.ip);
+  });
+
   // Activity logging hook
   app.addHook("onResponse", async (request, reply) => {
     if (request.url === "/api/health") return;
@@ -71,6 +111,7 @@ export function createServer(config: ServerConfig, httpsOpts?: { cert: Buffer; k
       statusCode: reply.statusCode,
       durationMs: Math.round(reply.elapsedTime),
       ip: request.ip,
+      reason: (request as typeof request & { auditReason?: string }).auditReason,
     };
     activityLogger.log(entry);
   });
