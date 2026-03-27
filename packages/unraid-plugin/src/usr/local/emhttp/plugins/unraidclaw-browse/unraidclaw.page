@@ -129,8 +129,8 @@ $logFile = "/boot/config/plugins/{$plugin}/activity.jsonl";
           <td>Unraid API Key:</td>
           <td>
             <?php $hasApiKey = !empty($cfg['UNRAID_API_KEY']); ?>
-            <input type="password" name="UNRAID_API_KEY" value="" size="50" autocomplete="off" placeholder="<?=$hasApiKey ? '(key configured - leave blank to keep)' : 'Enter Unraid API key'?>">
-            <?php if ($hasApiKey): ?><span class="occ-badge occ-badge-ok" style="margin-left:8px">Configured</span><?php endif; ?>
+            <input type="password" id="occ-unraid-api-key" name="UNRAID_API_KEY" value="" size="50" autocomplete="off" placeholder="<?=$hasApiKey ? '(key configured - leave blank to keep)' : 'Enter Unraid API key'?>">
+            <span id="occ-unraid-api-key-badge"><?php if ($hasApiKey): ?><span class="occ-badge occ-badge-ok" style="margin-left:8px">Configured</span><?php endif; ?></span>
             <span class="occ-hint">API key for authenticating to Unraid's GraphQL API. Leave blank to keep existing key.</span>
           </td>
         </tr>

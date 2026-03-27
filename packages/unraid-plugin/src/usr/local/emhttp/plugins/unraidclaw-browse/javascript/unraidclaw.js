@@ -105,6 +105,13 @@ function occGenerateKey() {
         if (resp.key) {
           keyInput.value = resp.key;
           keyInput.style.color = '#51cf66';
+          display.style.display = 'block';
+          var customKeyInput = document.getElementById('occ-custom-key');
+          if (customKeyInput) customKeyInput.value = '';
+          var currentKey = document.getElementById('occ-current-key-status');
+          if (currentKey && resp.hash_prefix) {
+            currentKey.innerHTML = '<span class="occ-badge occ-badge-ok">Active</span><span class="occ-hint">SHA-256: ' + resp.hash_prefix + '...</span>';
+          }
         } else if (resp.error) {
           keyInput.value = 'Error: ' + resp.error;
           keyInput.style.color = '#ff6b6b';
@@ -158,6 +165,10 @@ function occSaveCustomKey() {
             if (currentKey) {
               currentKey.innerHTML = '<span class="occ-badge occ-badge-ok">Active</span><span class="occ-hint">Custom key saved</span>';
             }
+            var generatedWrap = document.getElementById('occ-key-display');
+            var generatedInput = document.getElementById('occ-new-key');
+            if (generatedInput) generatedInput.value = '';
+            if (generatedWrap) generatedWrap.style.display = 'none';
           } else {
             statusEl.innerHTML = '<span style="color: #ff6b6b;">❌ Error: ' + (resp.error || 'Unknown') + '</span>';
           }
@@ -386,6 +397,13 @@ function occSaveSettings(e) {
                 badge.textContent = 'Running';
                 badge.className = 'occ-badge occ-badge-ok';
               }
+            }
+            var unraidApiInput = document.getElementById('occ-unraid-api-key');
+            var unraidApiBadge = document.getElementById('occ-unraid-api-key-badge');
+            if (unraidApiInput && unraidApiInput.value.trim() !== '') {
+              if (unraidApiBadge) unraidApiBadge.innerHTML = '<span class="occ-badge occ-badge-ok" style="margin-left:8px">Configured</span>';
+              unraidApiInput.value = '';
+              unraidApiInput.placeholder = '(key configured - leave blank to keep)';
             }
           } else {
             status.textContent = 'Error saving settings';
