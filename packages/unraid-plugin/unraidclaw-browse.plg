@@ -5,7 +5,7 @@
 <!ENTITY author    "emaspa">
 <!ENTITY version   "0.1.28-browse1">
 <!ENTITY launch    "Settings/unraidclaw-browse">
-<!ENTITY repo      "oleksandrIIIradchenko/unraidclaw">
+<!ENTITY repo      "oleksandrIIIradchenko/unraidclaw-custom">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/&repo;/main/packages/unraid-plugin/unraidclaw-browse.plg">
 <!ENTITY pkgURL    "https://github.com/&repo;/releases/download/v&version;/&name;-&version;-x86_64-1.txz">
 <!ENTITY md5       "b4e38b1d61fb349229d5dcce8f08e7e6">

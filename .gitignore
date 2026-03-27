@@ -1,6 +1,21 @@
-node_modules/
-dist/
-build/
-*.tsbuildinfo
+# macOS
 .DS_Store
-forum-post.html
+.AppleDouble
+.LSOverride
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Temp
+*.tmp
+*.bak
+
+# Build output
+*.txz
