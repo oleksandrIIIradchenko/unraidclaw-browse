@@ -7,21 +7,24 @@ cd "$ROOT_DIR"
 echo "[1/6] Install deps"
 pnpm install --frozen-lockfile --prod=false
 
-echo "[2/6] Unit tests"
+echo "[2/6] Prepare workspace packages for tests"
+pnpm --filter @unraidclaw/shared build
+
+echo "[3/6] Unit tests"
 pnpm --filter @unraidclaw/shared test
 pnpm --filter @unraidclaw/server test
 
-echo "[3/6] Typecheck"
+echo "[4/6] Typecheck"
 pnpm typecheck
 
-echo "[4/6] Build"
+echo "[5/6] Build"
 pnpm build
 
-echo "[5/6] Build plugin package"
+echo "[6/6] Build plugin package"
 VERSION=$(grep -oP 'ENTITY\s+version\s+"\K[^"]+' packages/unraid-plugin/unraidclaw-browse.plg)
 bash packages/unraid-plugin/scripts/build.sh "$VERSION"
 
-echo "[6/6] Validate PLG structure"
+echo "[7/7] Validate PLG structure"
 PLG="packages/unraid-plugin/unraidclaw-browse.plg"
 EXPECTED_PKG="unraidclaw-browse-${VERSION}-x86_64-1.txz"
 
