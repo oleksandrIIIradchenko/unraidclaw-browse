@@ -43,7 +43,7 @@ function occServiceControl(action) {
   if (btn) { btn.disabled = true; btn.textContent = action + 'ing...'; }
 
   var xhr = new XMLHttpRequest();
-  xhr.open('GET', '/plugins/unraidclaw/php/service-control.php?action=' + encodeURIComponent(action), true);
+  xhr.open('GET', '/plugins/unraidclaw-browse/php/service-control.php?action=' + encodeURIComponent(action), true);
   xhr.onreadystatechange = function() {
     if (xhr.readyState === 4) {
       if (xhr.status === 200 && xhr.responseText) {
@@ -74,7 +74,7 @@ function occGenerateKey() {
 
   var xhr = new XMLHttpRequest();
   // Use GET to avoid CSRF issues with emhttp
-  xhr.open('GET', '/plugins/unraidclaw/php/generate-key.php?action=generate&csrf_token=' + encodeURIComponent(occGetCsrf()), true);
+  xhr.open('GET', '/plugins/unraidclaw-browse/php/generate-key.php?action=generate&csrf_token=' + encodeURIComponent(occGetCsrf()), true);
   xhr.onreadystatechange = function() {
     if (xhr.readyState === 4) {
       var raw = xhr.responseText || '';
@@ -167,7 +167,7 @@ function occSavePermissions() {
 
   var xhr = new XMLHttpRequest();
   var data = encodeURIComponent(JSON.stringify(permissions));
-  xhr.open('GET', '/plugins/unraidclaw/php/save-permissions.php?data=' + data, true);
+  xhr.open('GET', '/plugins/unraidclaw-browse/php/save-permissions.php?data=' + data, true);
   xhr.onreadystatechange = function() {
     if (xhr.readyState === 4) {
       var status = document.getElementById('occ-perm-status');
@@ -201,7 +201,7 @@ function occRefreshLog() {
   var maxLines = limit ? parseInt(limit.value) : 100;
 
   var xhr = new XMLHttpRequest();
-  xhr.open('GET', '/plugins/unraidclaw/php/read-log.php?limit=' + maxLines, true);
+  xhr.open('GET', '/plugins/unraidclaw-browse/php/read-log.php?limit=' + maxLines, true);
   xhr.onreadystatechange = function() {
     if (xhr.readyState === 4 && xhr.status === 200) {
       var entries = JSON.parse(xhr.responseText);
@@ -237,7 +237,7 @@ function occRefreshLog() {
 function occClearLog() {
   if (!confirm('Clear the activity log?')) return;
   var xhr = new XMLHttpRequest();
-  xhr.open('GET', '/plugins/unraidclaw/php/clear-log.php', true);
+  xhr.open('GET', '/plugins/unraidclaw-browse/php/clear-log.php', true);
   xhr.onreadystatechange = function() {
     if (xhr.readyState === 4) {
       occRefreshLog();
@@ -257,7 +257,7 @@ function occFilterLog() {
 
 function occLoadRecentActivity() {
   var xhr = new XMLHttpRequest();
-  xhr.open('GET', '/plugins/unraidclaw/php/read-log.php?limit=10', true);
+  xhr.open('GET', '/plugins/unraidclaw-browse/php/read-log.php?limit=10', true);
   xhr.onreadystatechange = function() {
     if (xhr.readyState === 4 && xhr.status === 200) {
       var entries = JSON.parse(xhr.responseText);
@@ -306,7 +306,7 @@ function occSaveSettings(e) {
   }
 
   var xhr = new XMLHttpRequest();
-  xhr.open('GET', '/plugins/unraidclaw/php/save-settings.php?' + params.join('&'), true);
+  xhr.open('GET', '/plugins/unraidclaw-browse/php/save-settings.php?' + params.join('&'), true);
   xhr.onreadystatechange = function() {
     if (xhr.readyState === 4) {
       btn.disabled = false;
