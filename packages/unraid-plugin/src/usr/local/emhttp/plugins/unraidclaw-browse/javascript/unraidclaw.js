@@ -137,9 +137,12 @@ function occSaveCustomKey() {
         try {
           var resp = JSON.parse(xhr.responseText);
           if (resp.success) {
-            statusEl.innerHTML = '<span style="color: #51cf66;">✅ Key saved successfully! Reloading...</span>';
+            statusEl.innerHTML = '<span style="color: #51cf66;">✅ Key saved successfully!</span>';
             document.getElementById('occ-custom-key').value = '';
-            setTimeout(function() { location.reload(); }, 1000);
+            var currentKey = document.getElementById('occ-current-key-status');
+            if (currentKey) {
+              currentKey.innerHTML = '<span class="occ-badge occ-badge-ok">Active</span><span class="occ-hint">Custom key saved</span>';
+            }
           } else {
             statusEl.innerHTML = '<span style="color: #ff6b6b;">❌ Error: ' + (resp.error || 'Unknown') + '</span>';
           }
