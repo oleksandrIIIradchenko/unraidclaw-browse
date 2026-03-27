@@ -6,11 +6,11 @@ async function main(): Promise<void> {
   const config = loadConfig();
   const permissions = loadPermissions();
 
-  console.log("[unraidclaw] Loaded permissions:", Object.values(permissions).filter(Boolean).length, "enabled");
+  console.log("[unraidclaw-browse] Loaded permissions:", Object.values(permissions).filter(Boolean).length, "enabled");
 
   // Watch for permission changes (hot-reload)
   watchPermissions((matrix) => {
-    console.log("[unraidclaw] Permissions reloaded:", Object.values(matrix).filter(Boolean).length, "enabled");
+    console.log("[unraidclaw-browse] Permissions reloaded:", Object.values(matrix).filter(Boolean).length, "enabled");
   });
 
   // Load TLS cert/key if available
@@ -21,12 +21,12 @@ async function main(): Promise<void> {
         cert: readFileSync(config.tlsCert),
         key: readFileSync(config.tlsKey),
       };
-      console.log("[unraidclaw] TLS enabled — loaded cert from", config.tlsCert);
+      console.log("[unraidclaw-browse] TLS enabled — loaded cert from", config.tlsCert);
     } catch (err) {
-      console.warn("[unraidclaw] Failed to load TLS certs, falling back to HTTP:", err);
+      console.warn("[unraidclaw-browse] Failed to load TLS certs, falling back to HTTP:", err);
     }
   } else {
-    console.warn("[unraidclaw] TLS cert/key not found, running plain HTTP");
+    console.warn("[unraidclaw-browse] TLS cert/key not found, running plain HTTP");
   }
 
   const app = createServer(config, httpsOpts);
@@ -34,16 +34,16 @@ async function main(): Promise<void> {
 
   try {
     await app.listen({ port: config.port, host: config.host });
-    console.log(`[unraidclaw] Server running on ${proto}://${config.host}:${config.port}`);
+    console.log(`[unraidclaw-browse] Server running on ${proto}://${config.host}:${config.port}`);
   } catch (err) {
-    console.error("[unraidclaw] Failed to start:", err);
+    console.error("[unraidclaw-browse] Failed to start:", err);
     process.exit(1);
   }
 
   // Graceful shutdown
   for (const signal of ["SIGINT", "SIGTERM"] as const) {
     process.on(signal, async () => {
-      console.log(`[unraidclaw] Received ${signal}, shutting down...`);
+      console.log(`[unraidclaw-browse] Received ${signal}, shutting down...`);
       await app.close();
       process.exit(0);
     });
