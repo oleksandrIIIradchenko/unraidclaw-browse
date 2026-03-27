@@ -1,7 +1,7 @@
 <?php
 /* Save settings - supports GET (AJAX) and POST (form) */
-$plugin = 'unraidclaw';
-$cfgFile = "/boot/config/plugins/{$plugin}/unraidclaw.cfg";
+$plugin = 'unraidclaw-browse';
+$cfgFile = "/boot/config/plugins/${plugin}/${plugin}.cfg";
 
 $fields = ['SERVICE', 'PORT', 'HOST', 'GRAPHQL_URL', 'UNRAID_API_KEY', 'MAX_LOG_SIZE'];
 

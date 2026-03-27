@@ -113,6 +113,48 @@ function occCopyKey() {
   document.execCommand('copy');
 }
 
+// ── Custom API key ──
+function occSaveCustomKey() {
+  var customKey = document.getElementById('occ-custom-key').value.trim();
+  var statusEl = document.getElementById('occ-custom-key-status');
+
+  if (!customKey) {
+    statusEl.innerHTML = '<span style="color: #ff6b6b;">⚠️ Please enter a key</span>';
+    return;
+  }
+
+  if (customKey.length < 16) {
+    statusEl.innerHTML = '<span style="color: #ff6b6b;">⚠️ Key seems too short</span>';
+    return;
+  }
+
+  statusEl.innerHTML = '<span style="color: #aaa;">⏳ Saving...</span>';
+
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', '/plugins/unraidclaw-browse/php/generate-key.php?action=custom&key=' + encodeURIComponent(customKey) + '&csrf_token=' + encodeURIComponent(occGetCsrf()), true);
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState === 4) {
+      if (xhr.status === 200 && xhr.responseText) {
+        try {
+          var resp = JSON.parse(xhr.responseText);
+          if (resp.success) {
+            statusEl.innerHTML = '<span style="color: #51cf66;">✅ Key saved successfully!</span>';
+            document.getElementById('occ-custom-key').value = '';
+          } else {
+            statusEl.innerHTML = '<span style="color: #ff6b6b;">❌ Error: ' + (resp.error || 'Unknown') + '</span>';
+          }
+        } catch(e) {
+          statusEl.innerHTML = '<span style="color: #ff6b6b;">❌ Parse error</span>';
+        }
+      } else {
+        statusEl.innerHTML = '<span style="color: #ff6b6b;">❌ HTTP ' + xhr.status + '</span>';
+      }
+      setTimeout(function() { statusEl.innerHTML = ''; }, 5000);
+    }
+  };
+  xhr.send();
+}
+
 // ── Permissions ──
 function occApplyPreset(name) {
   var preset = OCC_PRESETS[name];
