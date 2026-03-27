@@ -4,6 +4,6 @@ CONFIG="/boot/config/plugins/unraidclaw/unraidclaw.cfg"
 if [ -f "$CONFIG" ]; then
   SERVICE=$(grep -oP 'SERVICE="\K[^"]+' "$CONFIG")
   if [ "$SERVICE" = "enable" ]; then
-    /etc/rc.d/rc.unraidclaw start
+    /etc/rc.d/rc.unraidclaw-browse start
   fi
 fi
