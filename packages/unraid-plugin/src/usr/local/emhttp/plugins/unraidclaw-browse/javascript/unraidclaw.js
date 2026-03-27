@@ -275,36 +275,43 @@ function occSavePermissions() {
 function occRefreshLog() {
   var limit = document.getElementById('occ-log-limit');
   var maxLines = limit ? parseInt(limit.value) : 100;
+  var tbody = document.getElementById('occ-log-body');
+  if (tbody) {
+    tbody.innerHTML = '<tr><td colspan="7"><em>Loading...</em></td></tr>';
+  }
 
   var xhr = new XMLHttpRequest();
   xhr.open('GET', '/plugins/unraidclaw-browse/php/read-log.php?limit=' + maxLines, true);
   xhr.onreadystatechange = function() {
-    if (xhr.readyState === 4 && xhr.status === 200) {
-      var entries = JSON.parse(xhr.responseText);
-      var tbody = document.getElementById('occ-log-body');
-      if (!entries.length) {
-        tbody.innerHTML = '<tr><td colspan="7"><em>No log entries</em></td></tr>';
-        return;
-      }
-      var html = '';
-      for (var i = entries.length - 1; i >= 0; i--) {
-        var e = entries[i];
-        var statusClass = '';
-        if (e.statusCode >= 200 && e.statusCode < 300) statusClass = 'occ-status-2xx';
-        else if (e.statusCode >= 400 && e.statusCode < 500) statusClass = 'occ-status-4xx';
-        else if (e.statusCode >= 500) statusClass = 'occ-status-5xx';
+    if (xhr.readyState === 4) {
+      if (xhr.status === 200) {
+        var entries = JSON.parse(xhr.responseText);
+        if (!entries.length) {
+          tbody.innerHTML = '<tr><td colspan="7"><em>No log entries</em></td></tr>';
+          return;
+        }
+        var html = '';
+        for (var i = entries.length - 1; i >= 0; i--) {
+          var e = entries[i];
+          var statusClass = '';
+          if (e.statusCode >= 200 && e.statusCode < 300) statusClass = 'occ-status-2xx';
+          else if (e.statusCode >= 400 && e.statusCode < 500) statusClass = 'occ-status-4xx';
+          else if (e.statusCode >= 500) statusClass = 'occ-status-5xx';
 
-        html += '<tr class="occ-log-row">' +
-          '<td>' + escapeHtml(e.timestamp) + '</td>' +
-          '<td>' + escapeHtml(e.method) + '</td>' +
-          '<td>' + escapeHtml(e.path) + '</td>' +
-          '<td>' + escapeHtml(e.resource) + '</td>' +
-          '<td class="' + statusClass + '">' + e.statusCode + '</td>' +
-          '<td>' + e.durationMs + 'ms</td>' +
-          '<td>' + escapeHtml(e.ip) + '</td>' +
-          '</tr>';
+          html += '<tr class="occ-log-row">' +
+            '<td>' + escapeHtml(e.timestamp) + '</td>' +
+            '<td>' + escapeHtml(e.method) + '</td>' +
+            '<td>' + escapeHtml(e.path) + '</td>' +
+            '<td>' + escapeHtml(e.resource) + '</td>' +
+            '<td class="' + statusClass + '">' + e.statusCode + '</td>' +
+            '<td>' + e.durationMs + 'ms</td>' +
+            '<td>' + escapeHtml(e.ip) + '</td>' +
+            '</tr>';
+        }
+        tbody.innerHTML = html;
+      } else if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="7"><em>Error loading log (HTTP ' + xhr.status + ')</em></td></tr>';
       }
-      tbody.innerHTML = html;
     }
   };
   xhr.send();
@@ -312,6 +319,10 @@ function occRefreshLog() {
 
 function occClearLog() {
   if (!confirm('Clear the activity log?')) return;
+  var tbody = document.getElementById('occ-log-body');
+  if (tbody) {
+    tbody.innerHTML = '<tr><td colspan="7"><em>Clearing...</em></td></tr>';
+  }
   var xhr = new XMLHttpRequest();
   xhr.open('GET', '/plugins/unraidclaw-browse/php/clear-log.php', true);
   xhr.onreadystatechange = function() {
@@ -393,14 +404,19 @@ function occSaveSettings(e) {
           if (resp.success) {
             status.textContent = 'Settings saved! Service ' + resp.service + '.';
             status.style.color = '#51cf66';
+            var isRunning = resp.service !== 'stopped';
             var badge = document.getElementById('occ-service-status');
             if (badge) {
-              if (resp.service === 'stopped') {
-                badge.textContent = 'Stopped';
-                badge.className = 'occ-badge occ-badge-stopped';
+              badge.textContent = isRunning ? 'Running' : 'Stopped';
+              badge.className = isRunning ? 'occ-badge occ-badge-ok' : 'occ-badge occ-badge-stopped';
+            }
+            var actions = document.getElementById('occ-service-actions');
+            if (actions) {
+              if (isRunning) {
+                actions.innerHTML = '<button class="occ-btn occ-btn-danger" onclick="occServiceControl(\'stop\')">Stop</button>' +
+                  '<button class="occ-btn occ-btn-warning" onclick="occServiceControl(\'restart\')">Restart</button>';
               } else {
-                badge.textContent = 'Running';
-                badge.className = 'occ-badge occ-badge-ok';
+                actions.innerHTML = '<button class="occ-btn occ-btn-success" onclick="occServiceControl(\'start\')">Start</button>';
               }
             }
             var unraidApiInput = document.getElementById('occ-unraid-api-key');
