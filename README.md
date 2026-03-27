@@ -29,20 +29,33 @@ All other features are identical to the original UnraidClaw.
 
 ### 🆕 What's added in this fork
 
-| Tool | Description |
+| Tool / API | Description |
 |------|-------------|
 | `unraid_disk_browse` | Browse disk filesystem hierarchy (read-only) |
 | `unraid_share_browse` | Browse share filesystem hierarchy (read-only) |
+| `GET /api/disks/:id/browse` | Browse disk contents with sorting / pagination metadata |
+| `GET /api/shares/:name/browse` | Browse share contents with sorting / pagination metadata |
 
 ---
 
-## Features (from UnraidClaw)
+## Features
 
-- **43 tools** across 11 categories: Docker, VMs, Array, Disks, Shares, System, Notifications, Network, Users, Logs
+- **43+ tools** across Docker, VMs, Array, Disks, Shares, System, Notifications, Network, Users, Logs
+- **Browse APIs** for disks and shares with:
+  - breadcrumbs metadata
+  - sorting (`name`, `size`, `mtime`)
+  - pagination (`limit`, `offset`)
+  - richer browse response metadata (`total`, `truncated`, etc.)
 - **22 permission keys** in a resource:action matrix, configurable from the WebGUI
 - **HTTPS** with auto-generated self-signed TLS certificate
 - **SHA-256 API key** authentication
 - **Activity logging** with JSONL format
+- **Basic browse hardening**:
+  - path traversal rejection
+  - symlink escape rejection
+  - max path length guard
+  - basic browse rate limiting
+- **Unit tests + smoke checks + CI workflows** are now included
 - **OpenClaw plugin** available on npm
 
 ---
@@ -89,7 +102,16 @@ The server starts on port `9876` over HTTPS by default.
 GET /api/disks/:id/browse?path=<directory>
 ```
 
-Returns directory listing with file sizes and modification times.
+Returns directory listing with file sizes, modification times, breadcrumbs, sorting info, pagination info, and total entry counts.
+
+Supported query params:
+- `path`
+- `limit`
+- `offset`
+- `sortBy=name|size|mtime`
+- `order=asc|desc`
+- `includeHidden=true|false`
+- `dirsOnly=true|false`
 
 **Permission:** `disk:read`
 
@@ -99,7 +121,16 @@ Returns directory listing with file sizes and modification times.
 GET /api/shares/:name/browse?path=<directory>
 ```
 
-Returns directory listing with file sizes and modification times.
+Returns directory listing with file sizes, modification times, breadcrumbs, sorting info, pagination info, and total entry counts.
+
+Supported query params:
+- `path`
+- `limit`
+- `offset`
+- `sortBy=name|size|mtime`
+- `order=asc|desc`
+- `includeHidden=true|false`
+- `dirsOnly=true|false`
 
 **Permission:** `share:read`
 

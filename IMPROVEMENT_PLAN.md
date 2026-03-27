@@ -77,11 +77,11 @@ This is the actual differentiator of the fork.
 
 ### Next
 - [ ] Breadcrumb navigation in UI
-- [ ] Show file size / modified date / type clearly
-- [ ] Directory-first sorting
-- [ ] Path validation / safe root enforcement
+- [ ] Show file size / modified date / type clearly in the plugin UI
+- [x] Directory-first sorting in browse API responses
+- [x] Path validation / safe root enforcement
 - [ ] Optional filtering by file extension
-- [ ] Pagination for large directories
+- [x] Pagination support in browse API responses
 
 ---
 
@@ -96,11 +96,11 @@ This is the actual differentiator of the fork.
 
 ### 3.2 Security controls
 - [ ] IP allowlist / denylist
-- [ ] Rate limiting
-- [ ] Better audit logging
-- [ ] Safer path normalization for browse endpoints
-- [ ] Reject traversal attempts explicitly
-- [ ] Add security notes in README
+- [x] Basic rate limiting for browse endpoints
+- [x] Better audit logging for denied browse requests
+- [x] Safer path normalization for browse endpoints
+- [x] Reject traversal attempts explicitly
+- [x] Add security notes in repo docs (`SECURITY_REVIEW.md`)
 
 ### 3.3 Auditability
 - [ ] Export logs to JSON/CSV
@@ -116,23 +116,23 @@ This is the actual differentiator of the fork.
 This should not be optional.
 
 ### 4.1 Automated checks
-- [ ] Unit tests for config loading
-- [ ] Unit tests for permission loading
-- [ ] Unit tests for path validation
+- [x] Unit tests for config loading
+- [x] Unit tests for permission loading
+- [x] Unit tests for path validation
 - [ ] Unit tests for key generation/custom key flow
 
 ### 4.2 Integration / E2E
 - [ ] UI button tests
 - [ ] Start/stop/restart flow tests
 - [ ] Save settings / save permissions tests
-- [ ] Browse endpoint tests
-- [ ] Upgrade/install smoke tests
+- [x] Browse endpoint tests (server-side/unit coverage)
+- [x] Upgrade/install smoke checks scaffolded via `scripts/smoke-check.sh`
 
 ### 4.3 CI
-- [ ] GitHub Actions build
-- [ ] Typecheck
-- [ ] Test run
-- [ ] Release artifact validation
+- [x] GitHub Actions build
+- [x] Typecheck
+- [x] Test run
+- [x] Release workflow updated for `unraidclaw-browse`
 - [ ] `.plg` URL / MD5 consistency check
 
 ---
