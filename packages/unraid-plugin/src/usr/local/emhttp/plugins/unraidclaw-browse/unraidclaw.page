@@ -61,16 +61,17 @@ $logFile = "/boot/config/plugins/{$plugin}/activity.jsonl";
     </div>
     <div class="occ-status-row">
       <span class="occ-label">API Key:</span>
-      <span><?=empty($cfg['API_KEY_HASH']) ? '<em>Not configured</em>' : 'Configured'?></span>
+      <span id="occ-dashboard-key-status"><?=empty($cfg['API_KEY_HASH']) ? '<em>Not configured</em>' : 'Configured'?></span>
     </div>
     <div class="occ-actions" id="occ-service-actions">
       <?php if ($isRunning): ?>
-        <button class="occ-btn occ-btn-danger" onclick="occServiceControl('stop')">Stop</button>
-        <button class="occ-btn occ-btn-warning" onclick="occServiceControl('restart')">Restart</button>
+        <button class="occ-btn occ-btn-danger" onclick="occServiceControl('stop', event)">Stop</button>
+        <button class="occ-btn occ-btn-warning" onclick="occServiceControl('restart', event)">Restart</button>
       <?php else: ?>
-        <button class="occ-btn occ-btn-success" onclick="occServiceControl('start')">Start</button>
+        <button class="occ-btn occ-btn-success" onclick="occServiceControl('start', event)">Start</button>
       <?php endif; ?>
     </div>
+    <div id="occ-service-feedback" style="margin-top:10px;"></div>
   </div>
 
   <div class="occ-status-card">
@@ -172,7 +173,7 @@ $logFile = "/boot/config/plugins/{$plugin}/activity.jsonl";
           <td>
             <input type="text" id="occ-custom-key" placeholder="Paste your API key here..." style="width: 100%; max-width: 400px; font-family: monospace; font-size: 13px; padding: 8px; background: rgba(0,0,0,0.2); color: #fff; border: 1px solid rgba(255,255,255,0.25); border-radius: 4px;">
             <button type="button" class="occ-btn occ-btn-success" onclick="occSaveCustomKey()">💾 Use This Key</button>
-            <div id="occ-custom-key-status" style="margin-top: 8px; font-size: 12px;"></div>
+            <div id="occ-custom-key-status" class="occ-inline-status" style="margin-top: 8px; font-size: 12px;"></div>
           </td>
         </tr>
       </tbody>
@@ -196,7 +197,7 @@ $logFile = "/boot/config/plugins/{$plugin}/activity.jsonl";
     <div style="margin-top: 20px;">
       <button type="submit" id="occ-apply-btn" class="occ-btn occ-btn-primary">Apply</button>
       <button type="button" class="occ-btn" onclick="occResetDefaults()">Reset to Defaults</button>
-      <span id="occ-settings-status" style="margin-left: 15px; font-weight: bold;"></span>
+      <span id="occ-settings-status" class="occ-inline-status" style="margin-left: 15px; font-weight: bold;"></span>
     </div>
   </form>
 </div>
@@ -363,7 +364,7 @@ $logFile = "/boot/config/plugins/{$plugin}/activity.jsonl";
 
     <div class="occ-perm-actions">
       <button type="button" class="occ-btn occ-btn-primary" onclick="occSavePermissions()">Save Permissions</button>
-      <span id="occ-perm-status"></span>
+      <span id="occ-perm-status" class="occ-inline-status"></span>
     </div>
   </form>
 </div>
