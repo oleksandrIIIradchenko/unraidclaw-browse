@@ -30,6 +30,23 @@ afterEach(() => {
 });
 
 describe('config', () => {
+  it('respects isolated FLASH_BASE during smoke-style runs', async () => {
+    const dir = makeTempDir();
+    process.env.FLASH_BASE = dir;
+    const mod = await import('./config.js');
+    const cfg = mod.loadConfig();
+    const perms = mod.loadPermissions();
+    const permissionsFile = join(dir, 'permissions.json');
+    expect(mod.getFlashBase()).toBe(dir);
+    expect(mod.getPermissionsFile()).toBe(permissionsFile);
+    expect(cfg.port).toBe(9876);
+    expect(cfg.host).toBe('0.0.0.0');
+    expect(typeof perms['docker:read']).toBe('boolean');
+    expect(existsSync(permissionsFile)).toBe(true);
+    const raw = JSON.parse(readFileSync(permissionsFile, 'utf-8'));
+    expect(raw['docker:read']).toBe(false);
+  });
+
   it('loads config from unraidclaw-browse.cfg under FLASH_BASE', async () => {
     const dir = makeTempDir();
     process.env.FLASH_BASE = dir;

@@ -10,6 +10,7 @@
     "dev": "tsx watch src/index.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "smoke:config": "vitest run src/config.test.ts",
     "clean": "rm -rf dist"
   },
   "dependencies": {

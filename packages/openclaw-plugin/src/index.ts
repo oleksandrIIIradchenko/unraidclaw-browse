@@ -19,6 +19,7 @@ interface ServerEntry extends ClientConfig {
 function resolveServers(api: any): ServerEntry[] {
   // Try to find raw config from various OpenClaw config shapes
   const raw = api.config?.servers ?? api.pluginConfig?.servers
+    ?? api.config?.plugins?.entries?.unraidclaw_browse?.config?.servers
     ?? api.config?.plugins?.entries?.unraidclaw?.config?.servers;
 
   if (Array.isArray(raw) && raw.length > 0) return raw;
@@ -26,7 +27,8 @@ function resolveServers(api: any): ServerEntry[] {
   // Fall back to single-server config (backwards compatible)
   const single = api.config?.serverUrl ? api.config
     : api.pluginConfig?.serverUrl ? api.pluginConfig
-    : api.config?.plugins?.entries?.unraidclaw?.config;
+    : api.config?.plugins?.entries?.unraidclaw_browse?.config
+      ?? api.config?.plugins?.entries?.unraidclaw?.config;
 
   if (single?.serverUrl) {
     return [{ name: "default", serverUrl: single.serverUrl, apiKey: single.apiKey, tlsSkipVerify: single.tlsSkipVerify, default: true }];
@@ -80,10 +82,10 @@ export default function register(api: any): void {
 
   const servers = resolveServers(api);
   if (servers.length > 1) {
-    log.info(`UnraidClaw: registered tools for ${servers.length} servers: ${servers.map((s) => s.name).join(", ")}`);
+    log.info(`UnraidClaw Browse: registered tools for ${servers.length} servers: ${servers.map((s) => s.name).join(", ")}`);
   } else if (servers.length === 1) {
-    log.info(`UnraidClaw: registered tools, server: ${servers[0].serverUrl}`);
+    log.info(`UnraidClaw Browse: registered tools, server: ${servers[0].serverUrl}`);
   } else {
-    log.info(`UnraidClaw: registered tools (config will resolve at runtime)`);
+    log.info(`UnraidClaw Browse: registered tools (config will resolve at runtime)`);
   }
 }
