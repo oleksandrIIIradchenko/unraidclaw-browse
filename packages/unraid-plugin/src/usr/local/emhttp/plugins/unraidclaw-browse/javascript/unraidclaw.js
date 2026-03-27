@@ -405,10 +405,15 @@ function occSaveSettings(e) {
             }
             var unraidApiInput = document.getElementById('occ-unraid-api-key');
             var unraidApiBadge = document.getElementById('occ-unraid-api-key-badge');
-            if (unraidApiInput && unraidApiInput.value.trim() !== '') {
-              if (unraidApiBadge) unraidApiBadge.innerHTML = '<span class="occ-badge occ-badge-ok" style="margin-left:8px">Configured</span>';
+            if (unraidApiInput) {
               unraidApiInput.value = '';
-              unraidApiInput.placeholder = '(key configured - leave blank to keep)';
+              if (resp.hasUnraidApiKey) {
+                if (unraidApiBadge) unraidApiBadge.innerHTML = '<span class="occ-badge occ-badge-ok" style="margin-left:8px">Configured</span>';
+                unraidApiInput.placeholder = '(key configured - leave blank to keep)';
+              } else {
+                if (unraidApiBadge) unraidApiBadge.innerHTML = '';
+                unraidApiInput.placeholder = 'Enter Unraid API key';
+              }
             }
           } else {
             status.textContent = 'Error saving settings';

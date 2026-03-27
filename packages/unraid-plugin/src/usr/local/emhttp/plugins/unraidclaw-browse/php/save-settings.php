@@ -91,6 +91,8 @@ if ($isAjax) {
         'service' => ($cfg['SERVICE'] ?? 'disable') === 'enable' ? 'restarted' : 'stopped',
         'serviceOutput' => $serviceOutput,
         'serviceCode' => $serviceCode,
+        'hasUnraidApiKey' => !empty($cfg['UNRAID_API_KEY']),
+        'hasPluginApiKey' => !empty($cfg['API_KEY_HASH']),
     ]);
 } else {
     header("Location: /Settings/{$plugin}.settings");
