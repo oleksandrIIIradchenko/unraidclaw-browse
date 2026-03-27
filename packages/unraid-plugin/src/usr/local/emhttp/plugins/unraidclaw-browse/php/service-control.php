@@ -30,6 +30,17 @@ $output = [];
 $returnCode = 0;
 exec("/etc/rc.d/rc.unraidclaw-browse {$action} 2>&1", $output, $returnCode);
 
+$serviceState = getServiceState($plugin);
+$success = $returnCode === 0;
+
+if (!$success && !$serviceState['isRunning'] && $action === 'stop') {
+    $success = true;
+}
+
+if (!$success && $serviceState['isRunning'] && ($action === 'start' || $action === 'restart')) {
+    $success = true;
+}
+
 echo json_encode([
     'success' => $success,
     'action' => $action,
