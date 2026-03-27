@@ -40,19 +40,34 @@ function occGetCsrf() {
 // ── Service control ──
 function occServiceControl(action) {
   var btn = event ? event.target : null;
+  var originalText = btn ? btn.textContent : '';
   if (btn) { btn.disabled = true; btn.textContent = action + 'ing...'; }
 
   var xhr = new XMLHttpRequest();
   xhr.open('GET', '/plugins/unraidclaw-browse/php/service-control.php?action=' + encodeURIComponent(action), true);
   xhr.onreadystatechange = function() {
     if (xhr.readyState === 4) {
+      if (btn) { btn.disabled = false; btn.textContent = originalText; }
       if (xhr.status === 200 && xhr.responseText) {
         try {
           var resp = JSON.parse(xhr.responseText);
           if (resp.returnCode !== 0) {
             alert('Service ' + action + ' failed (code ' + resp.returnCode + '):\n' + resp.output);
+          } else {
+            var badge = document.getElementById('occ-service-status');
+            if (badge) {
+              if (action === 'stop') {
+                badge.textContent = 'Stopped';
+                badge.className = 'occ-badge occ-badge-stopped';
+              } else {
+                badge.textContent = 'Running';
+                badge.className = 'occ-badge occ-badge-ok';
+              }
+            }
           }
-        } catch(e) {}
+        } catch(e) {
+          alert('Invalid response from service control');
+        }
       } else if (xhr.responseText === '') {
         alert('Empty response from service control - PHP may not be executing');
       }
@@ -362,6 +377,16 @@ function occSaveSettings(e) {
           if (resp.success) {
             status.textContent = 'Settings saved! Service ' + resp.service + '.';
             status.style.color = '#51cf66';
+            var badge = document.getElementById('occ-service-status');
+            if (badge) {
+              if (resp.service === 'stopped') {
+                badge.textContent = 'Stopped';
+                badge.className = 'occ-badge occ-badge-stopped';
+              } else {
+                badge.textContent = 'Running';
+                badge.className = 'occ-badge occ-badge-ok';
+              }
+            }
           } else {
             status.textContent = 'Error saving settings';
             status.style.color = '#ff6b6b';

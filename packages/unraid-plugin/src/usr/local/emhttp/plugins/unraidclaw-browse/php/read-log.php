@@ -5,7 +5,7 @@ header('Content-Type: application/json');
 $docroot = $docroot ?? $_SERVER['DOCUMENT_ROOT'] ?? '/usr/local/emhttp';
 require_once "$docroot/webGui/include/Wrappers.php";
 
-$logFile = '/boot/config/plugins/unraidclaw/activity.jsonl';
+$logFile = '/boot/config/plugins/unraidclaw-browse/activity.jsonl';
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 100;
 $limit = max(1, min(1000, $limit));
 
