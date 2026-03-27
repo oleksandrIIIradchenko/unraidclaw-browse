@@ -68,7 +68,7 @@
   padding: 22px 24px;
   background:
     linear-gradient(135deg, rgba(99, 164, 255, 0.24), rgba(142, 84, 233, 0.18)),
-    linear-gradient(180deg, #232846 0%, #1b1f35 100%);
+    linear-gradient(180deg, var(--occ-bg-elevated) 0%, var(--occ-bg) 100%);
   border-bottom: 1px solid var(--occ-border-strong);
 }
 
@@ -99,13 +99,13 @@
 
 .occ-header a,
 .occ-links a {
-  color: #8bc3ff;
+  color: var(--occ-primary);
   text-decoration: none;
 }
 
 .occ-header a:hover,
 .occ-links a:hover {
-  color: #b6d9ff;
+  color: var(--occ-primary-strong);
   text-decoration: underline;
 }
 
@@ -160,7 +160,7 @@
   right: 16px;
   height: 2px;
   border-radius: 999px;
-  background: linear-gradient(90deg, #6db4ff, #9d7bff);
+  background: linear-gradient(90deg, var(--occ-primary), #9d7bff);
 }
 
 .occ-tab-content {
@@ -247,12 +247,12 @@ em {
 }
 
 .occ-badge-ok {
-  background: linear-gradient(180deg, #35c97c, #249f60);
+  background: linear-gradient(180deg, var(--occ-success), #249f60);
   color: #f7fff9;
 }
 
 .occ-badge-stopped {
-  background: linear-gradient(180deg, #ff7a85, #de4b59);
+  background: linear-gradient(180deg, var(--occ-danger), #de4b59);
   color: #fff7f8;
 }
 
