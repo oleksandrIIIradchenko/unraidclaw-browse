@@ -136,6 +136,97 @@ Supported query params:
 
 ---
 
+## Authentication note
+
+For real Browse/API routes, use the generated UnraidClaw Browse API key in the header:
+
+```bash
+-H "X-API-Key: YOUR_UNRAIDCLAW_BROWSE_KEY"
+```
+
+Do **not** rely on `Authorization: Bearer ...` for browse/data routes.
+
+If OpenClaw is configured via env-backed secrets, prefer:
+- `${API_KEY_UNRAID_CLAW}`
+
+---
+
+## Browse API examples
+
+### REST examples
+
+Browse a disk path:
+
+```bash
+curl -s -k \
+  -H "X-API-Key: YOUR_UNRAIDCLAW_BROWSE_KEY" \
+  "https://YOUR-UNRAID:9876/api/disks/disk2/browse?path=/appdata/Docker-WebUI&limit=20"
+```
+
+Browse a share path:
+
+```bash
+curl -s -k \
+  -H "X-API-Key: YOUR_UNRAIDCLAW_BROWSE_KEY" \
+  "https://YOUR-UNRAID:9876/api/shares/appdata/browse?path=/EmbyServer/config&limit=20"
+```
+
+Browse only directories:
+
+```bash
+curl -s -k \
+  -H "X-API-Key: YOUR_UNRAIDCLAW_BROWSE_KEY" \
+  "https://YOUR-UNRAID:9876/api/disks/disk2/browse?path=/shared&dirsOnly=true&limit=100"
+```
+
+Sort by modification time descending:
+
+```bash
+curl -s -k \
+  -H "X-API-Key: YOUR_UNRAIDCLAW_BROWSE_KEY" \
+  "https://YOUR-UNRAID:9876/api/shares/appdata/browse?path=/EmbyServer/cache/ffmpeg&sortBy=mtime&order=desc&limit=20"
+```
+
+### OpenClaw tool examples
+
+Browse a disk path with the OpenClaw plugin tool:
+
+```json
+{
+  "name": "unraid_disk_browse",
+  "arguments": {
+    "id": "disk2",
+    "path": "/appdata/Docker-WebUI",
+    "limit": 20
+  }
+}
+```
+
+Browse a share path with the OpenClaw plugin tool:
+
+```json
+{
+  "name": "unraid_share_browse",
+  "arguments": {
+    "name": "appdata",
+    "path": "/EmbyServer/config",
+    "limit": 20
+  }
+}
+```
+
+### Real validated examples
+
+Validated on a live Unraid deployment:
+- `/api/disks/disk2/browse?path=/appdata/Docker-WebUI&limit=20`
+  - found `subdomains.yml`
+- `/api/disks/disk2/browse?path=/appdata/EmbyServer/cache/ffmpeg&limit=10`
+  - found ffmpeg metadata files
+- `/api/shares/appdata/browse?path=/EmbyServer/config&limit=20`
+  - found `users`, `mb.lic`, `system.xml`
+
+---
+
 ## Original UnraidClaw Documentation
 
 For full API reference, OpenClaw plugin setup, and architecture details, see the [original UnraidClaw README](https://github.com/emaspa/unraidclaw).
