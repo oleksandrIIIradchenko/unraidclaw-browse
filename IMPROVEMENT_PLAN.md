@@ -74,6 +74,14 @@ This is the actual differentiator of the fork.
 - [x] `GET /api/shares/:name/browse`
 - [x] `unraid_disk_browse`
 - [x] `unraid_share_browse`
+- [x] Live validation against deployed Unraid instance using `X-API-Key`
+- [x] Verified path parity between `/mnt/disk2/...` and `/mnt/user/appdata/...` browse views
+
+### Confirmed working examples
+- [x] `GET /api/disks/disk2/browse?path=/appdata/Docker-WebUI&limit=20`
+- [x] `GET /api/disks/disk2/browse?path=/appdata/EmbyServer/cache/ffmpeg&limit=10`
+- [x] `GET /api/shares/appdata/browse?path=/EmbyServer/config&limit=20`
+- [x] Lookup of real file metadata (`type`, `sizeBytes`, `mtime`, `resolvedPath`)
 
 ### Next
 - [ ] Breadcrumb navigation in UI
@@ -82,6 +90,9 @@ This is the actual differentiator of the fork.
 - [x] Path validation / safe root enforcement
 - [ ] Optional filtering by file extension
 - [x] Pagination support in browse API responses
+- [ ] Expose browse tools consistently in surfaced OpenClaw tool policy/runtime
+- [ ] Add end-to-end OpenClaw smoke test that actually invokes `unraid_disk_browse` / `unraid_share_browse`
+- [ ] Document env-backed auth path clearly for OpenClaw deployments (`${API_KEY_UNRAID_CLAW}`)
 
 ---
 
