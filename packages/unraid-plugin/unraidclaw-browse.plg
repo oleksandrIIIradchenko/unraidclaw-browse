@@ -3,7 +3,7 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name      "unraidclaw-browse">
 <!ENTITY author    "emaspa">
-<!ENTITY version   "0.1.28-browse4">
+<!ENTITY version   "v0.1.28-browse5">
 <!ENTITY launch    "Settings/unraidclaw-browse">
 <!ENTITY repo      "oleksandrIIIradchenko/unraidclaw-browse">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/&repo;/main/packages/unraid-plugin/unraidclaw-browse.plg">

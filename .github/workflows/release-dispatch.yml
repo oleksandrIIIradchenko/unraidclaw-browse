@@ -1,0 +1,113 @@
+name: Release UnraidClaw Browse (Manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version without leading v (e.g. 0.1.28-browse4)"
+        required: true
+        type: string
+      createTag:
+        description: "Create and push git tag v<version> if missing"
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build package
+        run: bash packages/unraid-plugin/scripts/build.sh "${{ inputs.version }}"
+
+      - name: Read MD5
+        id: md5
+        shell: bash
+        run: |
+          echo "md5=$(cat packages/unraid-plugin/build/unraidclaw-browse-${{ inputs.version }}-x86_64-1.txz.md5)" >> "$GITHUB_OUTPUT"
+
+      - name: Update .plg version and MD5
+        shell: bash
+        run: |
+          PLG="packages/unraid-plugin/unraidclaw-browse.plg"
+          sed -i 's/<!ENTITY version   "[^"]*">/<!ENTITY version   "${{ inputs.version }}">/' "$PLG"
+          sed -i 's/<!ENTITY md5       "[^"]*">/<!ENTITY md5       "${{ steps.md5.outputs.md5 }}">/' "$PLG"
+          grep -n 'ENTITY version\|ENTITY md5' "$PLG"
+
+      - name: Commit updated .plg
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add packages/unraid-plugin/unraidclaw-browse.plg
+          git diff --cached --quiet && echo "No .plg changes to commit" || git commit -m "release: update unraidclaw-browse.plg for v${{ inputs.version }}"
+          git push origin HEAD:main
+
+      - name: Ensure tag exists
+        if: ${{ inputs.createTag }}
+        shell: bash
+        run: |
+          TAG="v${{ inputs.version }}"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists"
+          else
+            git tag "$TAG"
+            git push origin "$TAG"
+          fi
+
+      - name: Prepare release notes
+        shell: bash
+        run: |
+          cat > release-notes.md <<'EOF'
+          ## Installation
+
+          ```bash
+          plugin install https://raw.githubusercontent.com/oleksandrIIIradchenko/unraidclaw-browse/main/packages/unraid-plugin/unraidclaw-browse.plg
+          ```
+          EOF
+
+      - name: Create or update GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          VERSION="${{ inputs.version }}"
+          TAG="v${VERSION}"
+          PKG="packages/unraid-plugin/build/unraidclaw-browse-${VERSION}-x86_64-1.txz"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --notes-file release-notes.md
+            gh release upload "$TAG" \
+              "$PKG" \
+              "${PKG}.md5" \
+              "packages/unraid-plugin/unraidclaw-browse.plg" \
+              --clobber
+          else
+            gh release create "$TAG" \
+              --title "$TAG" \
+              --generate-notes \
+              --notes-file release-notes.md \
+              "$PKG" \
+              "${PKG}.md5" \
+              "packages/unraid-plugin/unraidclaw-browse.plg"
+          fi

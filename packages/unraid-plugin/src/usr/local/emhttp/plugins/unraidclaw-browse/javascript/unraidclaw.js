@@ -1,6 +1,5 @@
-/* UnraidClaw Browse - WebGUI JavaScript v2 */
+/* UnraidClaw Browse - WebGUI JavaScript v3 */
 
-// ── Permission presets (mirror of shared/permissions.ts) ──
 var OCC_PRESETS = {
   'read-only': [
     'docker:read','vms:read','array:read','disk:read','share:read',
@@ -15,190 +14,233 @@ var OCC_PRESETS = {
     'vms:read','vms:update','vms:delete',
     'info:read','logs:read'
   ],
-  'full-admin': null, // all checked
-  'none': []          // all unchecked
+  'full-admin': null,
+  'none': []
 };
 
-// ── Category to checkbox name mapping ──
 var OCC_CATEGORIES = {
-  'docker':       ['docker:read','docker:create','docker:update','docker:delete'],
-  'vms':          ['vms:read','vms:update','vms:delete'],
-  'storage':      ['array:read','array:update','disk:read','share:read','share:update'],
-  'system':       ['info:read','os:update','services:read'],
+  'docker': ['docker:read','docker:create','docker:update','docker:delete'],
+  'vms': ['vms:read','vms:update','vms:delete'],
+  'storage': ['array:read','array:update','disk:read','share:read','share:update'],
+  'system': ['info:read','os:update','services:read'],
   'notification': ['notification:read','notification:create','notification:update','notification:delete'],
-  'network':      ['network:read'],
-  'users':        ['me:read'],
-  'logs':         ['logs:read']
+  'network': ['network:read'],
+  'users': ['me:read'],
+  'logs': ['logs:read']
 };
 
-// ── CSRF token (read from data attribute on demand) ──
 function occGetCsrf() {
   var el = document.getElementById('occ-app');
   return el ? el.getAttribute('data-csrf') || '' : '';
 }
 
-// ── Service control ──
-function occServiceControl(action) {
-  var btn = event ? event.target : null;
+function occEscapeHtml(text) {
+  if (text === null || text === undefined) return '';
+  var div = document.createElement('div');
+  div.appendChild(document.createTextNode(String(text)));
+  return div.innerHTML;
+}
+
+function occSetInlineStatus(id, kind, message, autoDismissMs) {
+  var el = typeof id === 'string' ? document.getElementById(id) : id;
+  if (!el) return;
+  el.className = 'occ-inline-status occ-inline-status-' + kind;
+  el.textContent = message;
+  if (el._occTimer) clearTimeout(el._occTimer);
+  if (autoDismissMs) {
+    el._occTimer = setTimeout(function() {
+      el.textContent = '';
+      el.className = 'occ-inline-status';
+    }, autoDismissMs);
+  }
+}
+
+function occRenderServiceActions(isRunning) {
+  var actions = document.getElementById('occ-service-actions');
+  if (!actions) return;
+  if (isRunning) {
+    actions.innerHTML = '<button class="occ-btn occ-btn-danger" onclick="occServiceControl(\'stop\', event)">Stop</button>' +
+      '<button class="occ-btn occ-btn-warning" onclick="occServiceControl(\'restart\', event)">Restart</button>';
+  } else {
+    actions.innerHTML = '<button class="occ-btn occ-btn-success" onclick="occServiceControl(\'start\', event)">Start</button>';
+  }
+}
+
+function occApplyServiceState(service) {
+  if (!service) return;
+  var badge = document.getElementById('occ-service-status');
+  if (badge) {
+    badge.textContent = service.isRunning ? 'Running' : 'Stopped';
+    badge.className = service.isRunning ? 'occ-badge occ-badge-ok' : 'occ-badge occ-badge-stopped';
+    if (!service.isRunning && service.statusText && service.statusText !== 'stopped') {
+      badge.title = service.statusText;
+    } else {
+      badge.removeAttribute('title');
+    }
+  }
+  occRenderServiceActions(service.isRunning);
+}
+
+function occUpdateKeyStatus(hashPrefix, hintText) {
+  var currentKey = document.getElementById('occ-current-key-status');
+  var dashboardKey = document.getElementById('occ-dashboard-key-status');
+  if (currentKey) {
+    if (hashPrefix) {
+      currentKey.innerHTML = '<span class="occ-badge occ-badge-ok">Active</span><span class="occ-hint">' + occEscapeHtml(hintText || ('SHA-256: ' + hashPrefix + '...')) + '</span>';
+    } else {
+      currentKey.innerHTML = '<em>No key configured</em>';
+    }
+  }
+  if (dashboardKey) {
+    dashboardKey.innerHTML = hashPrefix ? 'Configured' : '<em>Not configured</em>';
+  }
+}
+
+function occResetGeneratedKeyDisplay() {
+  var display = document.getElementById('occ-key-display');
+  var keyInput = document.getElementById('occ-new-key');
+  if (keyInput) {
+    keyInput.value = '';
+    keyInput.style.color = '#51cf66';
+  }
+  if (display) display.style.display = 'none';
+}
+
+function occServiceControl(action, evt) {
+  var btn = evt && evt.target ? evt.target : null;
   var originalText = btn ? btn.textContent : '';
-  if (btn) { btn.disabled = true; btn.textContent = action + 'ing...'; }
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = action === 'restart' ? 'Restarting...' : (action.charAt(0).toUpperCase() + action.slice(1) + 'ing...');
+  }
+  occSetInlineStatus('occ-service-feedback', 'info', 'Checking live service state...', 0);
 
   var xhr = new XMLHttpRequest();
   xhr.open('GET', '/plugins/unraidclaw-browse/php/service-control.php?action=' + encodeURIComponent(action), true);
   xhr.onreadystatechange = function() {
-    if (xhr.readyState === 4) {
-      if (btn) { btn.disabled = false; btn.textContent = originalText; }
-      if (xhr.status === 200 && xhr.responseText) {
-        try {
-          var resp = JSON.parse(xhr.responseText);
-          if (resp.returnCode !== 0) {
-            alert('Service ' + action + ' failed (code ' + resp.returnCode + '):\n' + resp.output);
-          } else {
-            var isRunning = action !== 'stop';
-            var badge = document.getElementById('occ-service-status');
-            if (badge) {
-              badge.textContent = isRunning ? 'Running' : 'Stopped';
-              badge.className = isRunning ? 'occ-badge occ-badge-ok' : 'occ-badge occ-badge-stopped';
-            }
-            var actions = document.getElementById('occ-service-actions');
-            if (actions) {
-              if (isRunning) {
-                actions.innerHTML = '<button class="occ-btn occ-btn-danger" onclick="occServiceControl(\'stop\')">Stop</button>' +
-                  '<button class="occ-btn occ-btn-warning" onclick="occServiceControl(\'restart\')">Restart</button>';
-              } else {
-                actions.innerHTML = '<button class="occ-btn occ-btn-success" onclick="occServiceControl(\'start\')">Start</button>';
-              }
-            }
-          }
-        } catch(e) {
-          alert('Invalid response from service control');
-        }
-      } else if (xhr.responseText === '') {
-        alert('Empty response from service control - PHP may not be executing');
-      }
+    if (xhr.readyState !== 4) return;
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = originalText;
     }
+
+    var resp = null;
+    try {
+      resp = xhr.responseText ? JSON.parse(xhr.responseText) : null;
+    } catch (e) {}
+
+    if (xhr.status === 200 && resp && resp.success) {
+      occApplyServiceState(resp.service);
+      occSetInlineStatus('occ-service-feedback', 'success', 'Service ' + action + ' completed. Live state: ' + (resp.service && resp.service.isRunning ? 'running' : 'stopped') + '.', 5000);
+      return;
+    }
+
+    occApplyServiceState(resp && resp.service ? resp.service : null);
+    var message = resp && resp.error ? resp.error : (resp && resp.output ? resp.output : 'Service ' + action + ' failed');
+    occSetInlineStatus('occ-service-feedback', 'error', message, 5000);
   };
   xhr.send();
 }
 
-// ── API key generation ──
 function occGenerateKey() {
   if (!confirm('Generate a new API key? The old key will be invalidated.')) return;
 
   var display = document.getElementById('occ-key-display');
   var keyInput = document.getElementById('occ-new-key');
-  display.style.display = 'block';
-  keyInput.value = 'Generating...';
-  keyInput.style.color = '#aaa';
+  var customStatus = document.getElementById('occ-custom-key-status');
+  var customKeyInput = document.getElementById('occ-custom-key');
+
+  if (display) display.style.display = 'block';
+  if (keyInput) {
+    keyInput.value = 'Generating...';
+    keyInput.style.color = '#aaa';
+  }
+  if (customKeyInput) customKeyInput.value = '';
+  if (customStatus) {
+    customStatus.textContent = '';
+    customStatus.className = 'occ-inline-status';
+  }
 
   var xhr = new XMLHttpRequest();
-  // Use GET to avoid CSRF issues with emhttp
   xhr.open('GET', '/plugins/unraidclaw-browse/php/generate-key.php?action=generate&csrf_token=' + encodeURIComponent(occGetCsrf()), true);
   xhr.onreadystatechange = function() {
-    if (xhr.readyState === 4) {
-      var raw = xhr.responseText || '';
-      var debugInfo = '[HTTP ' + xhr.status + ', len=' + raw.length + ']';
+    if (xhr.readyState !== 4) return;
 
-      if (raw.length === 0) {
-        keyInput.value = 'Empty response ' + debugInfo + ' - PHP may not be executing. Check Unraid syslog.';
-        keyInput.style.color = '#ff6b6b';
-        return;
-      }
+    var raw = xhr.responseText || '';
+    var resp = null;
+    try {
+      resp = raw ? JSON.parse(raw) : null;
+    } catch (e) {}
 
-      try {
-        var resp = JSON.parse(raw);
-        if (resp.key) {
-          keyInput.value = resp.key;
-          keyInput.style.color = '#51cf66';
-          display.style.display = 'block';
-          var customKeyInput = document.getElementById('occ-custom-key');
-          if (customKeyInput) customKeyInput.value = '';
-          var currentKey = document.getElementById('occ-current-key-status');
-          if (currentKey && resp.hash_prefix) {
-            currentKey.innerHTML = '<span class="occ-badge occ-badge-ok">Active</span><span class="occ-hint">SHA-256: ' + resp.hash_prefix + '...</span>';
-          }
-        } else if (resp.error) {
-          keyInput.value = 'Error: ' + resp.error;
-          keyInput.style.color = '#ff6b6b';
-        } else {
-          keyInput.value = 'Unexpected: ' + raw.substring(0, 300);
-          keyInput.style.color = '#ff6b6b';
-        }
-      } catch(e) {
-        keyInput.value = 'Not JSON ' + debugInfo + ': ' + raw.substring(0, 300);
-        keyInput.style.color = '#ff6b6b';
+    if (xhr.status === 200 && resp && resp.success && resp.key) {
+      if (keyInput) {
+        keyInput.value = resp.key;
+        keyInput.style.color = '#51cf66';
       }
+      occUpdateKeyStatus(resp.hash_prefix, 'SHA-256: ' + resp.hash_prefix + '...');
+      occSetInlineStatus('occ-custom-key-status', 'success', 'New key generated and saved. Copy it now; it will not be shown again.', 5000);
+      return;
     }
+
+    if (keyInput) {
+      keyInput.value = 'Error: ' + ((resp && resp.error) || ('HTTP ' + xhr.status));
+      keyInput.style.color = '#ff6b6b';
+    }
+    occSetInlineStatus('occ-custom-key-status', 'error', (resp && resp.error) || 'Failed to generate key', 5000);
   };
   xhr.send();
 }
 
 function occCopyKey() {
   var input = document.getElementById('occ-new-key');
+  if (!input || !input.value) return;
   input.select();
   document.execCommand('copy');
 }
 
-// ── Custom API key ──
 function occSaveCustomKey() {
-  var customKey = document.getElementById('occ-custom-key').value.trim();
-  var statusEl = document.getElementById('occ-custom-key-status');
+  var customKeyInput = document.getElementById('occ-custom-key');
+  var customKey = customKeyInput ? customKeyInput.value.trim() : '';
 
   if (!customKey) {
-    statusEl.innerHTML = '<span style="color: #ff6b6b;">⚠️ Please enter a key</span>';
+    occSetInlineStatus('occ-custom-key-status', 'error', 'Please enter a key.', 5000);
     return;
   }
-
   if (customKey.length < 16) {
-    statusEl.innerHTML = '<span style="color: #ff6b6b;">⚠️ Key seems too short</span>';
+    occSetInlineStatus('occ-custom-key-status', 'error', 'Key seems too short.', 5000);
     return;
   }
 
-  statusEl.innerHTML = '<span style="color: #aaa;">⏳ Saving...</span>';
+  occSetInlineStatus('occ-custom-key-status', 'info', 'Saving custom key...', 0);
 
   var xhr = new XMLHttpRequest();
   xhr.open('GET', '/plugins/unraidclaw-browse/php/generate-key.php?action=custom&key=' + encodeURIComponent(customKey) + '&csrf_token=' + encodeURIComponent(occGetCsrf()), true);
   xhr.onreadystatechange = function() {
-    if (xhr.readyState === 4) {
-      if (xhr.status === 200 && xhr.responseText) {
-        try {
-          var resp = JSON.parse(xhr.responseText);
-          if (resp.success) {
-            statusEl.innerHTML = '<span style="color: #51cf66;">✅ Key saved successfully!</span>';
-            document.getElementById('occ-custom-key').value = '';
-            var currentKey = document.getElementById('occ-current-key-status');
-            if (currentKey) {
-              currentKey.innerHTML = '<span class="occ-badge occ-badge-ok">Active</span><span class="occ-hint">Custom key saved</span>';
-            }
-            var generatedWrap = document.getElementById('occ-key-display');
-            var generatedInput = document.getElementById('occ-new-key');
-            if (generatedInput) generatedInput.value = '';
-            if (generatedWrap) generatedWrap.style.display = 'none';
-          } else {
-            statusEl.innerHTML = '<span style="color: #ff6b6b;">❌ Error: ' + (resp.error || 'Unknown') + '</span>';
-          }
-        } catch(e) {
-          statusEl.innerHTML = '<span style="color: #ff6b6b;">❌ Parse error</span>';
-        }
-      } else {
-        statusEl.innerHTML = '<span style="color: #ff6b6b;">❌ HTTP ' + xhr.status + '</span>';
-      }
-      setTimeout(function() { statusEl.innerHTML = ''; }, 5000);
+    if (xhr.readyState !== 4) return;
+
+    var resp = null;
+    try {
+      resp = xhr.responseText ? JSON.parse(xhr.responseText) : null;
+    } catch (e) {}
+
+    if (xhr.status === 200 && resp && resp.success) {
+      if (customKeyInput) customKeyInput.value = '';
+      occResetGeneratedKeyDisplay();
+      occUpdateKeyStatus(resp.hash_prefix, 'SHA-256: ' + resp.hash_prefix + '...');
+      occSetInlineStatus('occ-custom-key-status', 'success', 'Custom key saved successfully.', 5000);
+      return;
     }
+
+    occSetInlineStatus('occ-custom-key-status', 'error', (resp && resp.error) || ('HTTP ' + xhr.status), 5000);
   };
   xhr.send();
 }
 
-// ── Permissions ──
 function occApplyPreset(name) {
   var preset = OCC_PRESETS[name];
   var checkboxes = document.querySelectorAll('#occ-permissions-form input[type="checkbox"]');
   for (var i = 0; i < checkboxes.length; i++) {
-    if (preset === null) {
-      checkboxes[i].checked = true;  // full-admin
-    } else {
-      checkboxes[i].checked = preset.indexOf(checkboxes[i].name) !== -1;
-    }
+    checkboxes[i].checked = preset === null ? true : preset.indexOf(checkboxes[i].name) !== -1;
   }
   occUpdatePermissionSummaries();
 }
@@ -228,9 +270,7 @@ function occUpdatePermissionSummaries() {
       if (cb && cb.checked) enabled++;
     }
     var summaryEl = document.querySelector('[data-category="' + cat + '"]');
-    if (summaryEl) {
-      summaryEl.textContent = enabled + '/' + keys.length;
-    }
+    if (summaryEl) summaryEl.textContent = enabled + '/' + keys.length;
   }
 }
 
@@ -241,104 +281,111 @@ function occSavePermissions() {
     permissions[checkboxes[i].name] = checkboxes[i].checked;
   }
 
+  occSetInlineStatus('occ-perm-status', 'info', 'Saving permissions...', 0);
+
   var xhr = new XMLHttpRequest();
-  var data = encodeURIComponent(JSON.stringify(permissions));
-  xhr.open('GET', '/plugins/unraidclaw-browse/php/save-permissions.php?data=' + data, true);
+  xhr.open('GET', '/plugins/unraidclaw-browse/php/save-permissions.php?data=' + encodeURIComponent(JSON.stringify(permissions)), true);
   xhr.onreadystatechange = function() {
-    if (xhr.readyState === 4) {
-      var status = document.getElementById('occ-perm-status');
-      if (xhr.status === 200) {
-        try {
-          var resp = JSON.parse(xhr.responseText);
-          if (resp.success) {
-            status.textContent = 'Saved! (' + resp.count + ' permissions enabled)';
-            status.style.color = '#51cf66';
-          } else {
-            status.textContent = 'Error: ' + (resp.error || 'Unknown');
-            status.style.color = '#ff6b6b';
-          }
-        } catch(e) {
-          status.textContent = 'Error: ' + xhr.responseText.substring(0, 100);
-          status.style.color = '#ff6b6b';
-        }
-      } else {
-        status.textContent = 'Error saving (HTTP ' + xhr.status + ')';
-        status.style.color = '#ff6b6b';
-      }
-      setTimeout(function() { status.textContent = ''; }, 5000);
+    if (xhr.readyState !== 4) return;
+    var resp = null;
+    try {
+      resp = xhr.responseText ? JSON.parse(xhr.responseText) : null;
+    } catch (e) {}
+
+    if (xhr.status === 200 && resp && resp.success) {
+      occSetInlineStatus('occ-perm-status', 'success', resp.message + ' (' + resp.count + ' enabled)', 5000);
+      return;
     }
+
+    occSetInlineStatus('occ-perm-status', 'error', (resp && resp.error) || ('Error saving permissions (HTTP ' + xhr.status + ')'), 5000);
   };
   xhr.send();
 }
 
-// ── Activity log ──
+function occRenderLogRows(entries) {
+  var tbody = document.getElementById('occ-log-body');
+  if (!tbody) return;
+  var html = '';
+  for (var i = entries.length - 1; i >= 0; i--) {
+    var e = entries[i] || {};
+    var statusCode = typeof e.statusCode === 'number' ? e.statusCode : 0;
+    var statusClass = '';
+    if (statusCode >= 200 && statusCode < 300) statusClass = 'occ-status-2xx';
+    else if (statusCode >= 400 && statusCode < 500) statusClass = 'occ-status-4xx';
+    else if (statusCode >= 500) statusClass = 'occ-status-5xx';
+
+    html += '<tr class="occ-log-row">' +
+      '<td>' + occEscapeHtml(e.timestamp) + '</td>' +
+      '<td>' + occEscapeHtml(e.method) + '</td>' +
+      '<td>' + occEscapeHtml(e.path) + '</td>' +
+      '<td>' + occEscapeHtml(e.resource) + '</td>' +
+      '<td class="' + statusClass + '">' + occEscapeHtml(statusCode || '-') + '</td>' +
+      '<td>' + occEscapeHtml((e.durationMs || 0) + 'ms') + '</td>' +
+      '<td>' + occEscapeHtml(e.ip) + '</td>' +
+      '</tr>';
+  }
+  tbody.innerHTML = html;
+}
+
+function occRenderLogState(kind, message) {
+  var tbody = document.getElementById('occ-log-body');
+  if (!tbody) return;
+  var cls = 'occ-log-state occ-log-state-' + kind;
+  tbody.innerHTML = '<tr><td colspan="7"><div class="' + cls + '">' + message + '</div></td></tr>';
+}
+
 function occRefreshLog() {
   var limit = document.getElementById('occ-log-limit');
-  var maxLines = limit ? parseInt(limit.value) : 100;
-  var tbody = document.getElementById('occ-log-body');
-  if (tbody) {
-    tbody.innerHTML = '<tr><td colspan="7"><em>Loading...</em></td></tr>';
-  }
+  var maxLines = limit ? parseInt(limit.value, 10) : 100;
+  occRenderLogState('loading', 'Loading activity log...');
 
   var xhr = new XMLHttpRequest();
   xhr.open('GET', '/plugins/unraidclaw-browse/php/read-log.php?limit=' + maxLines, true);
   xhr.onreadystatechange = function() {
-    if (xhr.readyState === 4) {
-      if (xhr.status === 200) {
-        var entries = JSON.parse(xhr.responseText);
-        if (!entries.length) {
-          tbody.innerHTML = '<tr><td colspan="7"><em>No log entries</em></td></tr>';
-          return;
-        }
-        var html = '';
-        for (var i = entries.length - 1; i >= 0; i--) {
-          var e = entries[i];
-          var statusClass = '';
-          if (e.statusCode >= 200 && e.statusCode < 300) statusClass = 'occ-status-2xx';
-          else if (e.statusCode >= 400 && e.statusCode < 500) statusClass = 'occ-status-4xx';
-          else if (e.statusCode >= 500) statusClass = 'occ-status-5xx';
+    if (xhr.readyState !== 4) return;
 
-          html += '<tr class="occ-log-row">' +
-            '<td>' + escapeHtml(e.timestamp) + '</td>' +
-            '<td>' + escapeHtml(e.method) + '</td>' +
-            '<td>' + escapeHtml(e.path) + '</td>' +
-            '<td>' + escapeHtml(e.resource) + '</td>' +
-            '<td class="' + statusClass + '">' + e.statusCode + '</td>' +
-            '<td>' + e.durationMs + 'ms</td>' +
-            '<td>' + escapeHtml(e.ip) + '</td>' +
-            '</tr>';
-        }
-        tbody.innerHTML = html;
-      } else if (tbody) {
-        tbody.innerHTML = '<tr><td colspan="7"><em>Error loading log (HTTP ' + xhr.status + ')</em></td></tr>';
+    var resp = null;
+    try {
+      resp = xhr.responseText ? JSON.parse(xhr.responseText) : null;
+    } catch (e) {}
+
+    if (xhr.status === 200 && resp && resp.success) {
+      if (!resp.entries || !resp.entries.length) {
+        occRenderLogState('empty', occEscapeHtml(resp.message || 'No log entries yet.'));
+        return;
       }
+      occRenderLogRows(resp.entries);
+      return;
     }
+
+    occRenderLogState('error', occEscapeHtml((resp && resp.message) || ('Error loading log (HTTP ' + xhr.status + ')')));
   };
   xhr.send();
 }
 
 function occClearLog() {
   if (!confirm('Clear the activity log?')) return;
-  var tbody = document.getElementById('occ-log-body');
-  if (tbody) {
-    tbody.innerHTML = '<tr><td colspan="7"><em>Clearing...</em></td></tr>';
-  }
+  occRenderLogState('loading', 'Clearing activity log...');
+
   var xhr = new XMLHttpRequest();
   xhr.open('GET', '/plugins/unraidclaw-browse/php/clear-log.php', true);
   xhr.onreadystatechange = function() {
-    if (xhr.readyState === 4) {
+    if (xhr.readyState !== 4) return;
+    if (xhr.status === 200) {
       occRefreshLog();
+      return;
     }
+    occRenderLogState('error', 'Failed to clear activity log (HTTP ' + xhr.status + ').');
   };
   xhr.send();
 }
 
 function occFilterLog() {
-  var filter = document.getElementById('occ-log-filter').value.toLowerCase();
+  var filterInput = document.getElementById('occ-log-filter');
+  var filter = filterInput ? filterInput.value.toLowerCase() : '';
   var rows = document.querySelectorAll('.occ-log-row');
   for (var i = 0; i < rows.length; i++) {
-    var text = rows[i].textContent.toLowerCase();
-    rows[i].style.display = text.indexOf(filter) !== -1 ? '' : 'none';
+    rows[i].style.display = rows[i].textContent.toLowerCase().indexOf(filter) !== -1 ? '' : 'none';
   }
 }
 
@@ -346,28 +393,37 @@ function occLoadRecentActivity() {
   var xhr = new XMLHttpRequest();
   xhr.open('GET', '/plugins/unraidclaw-browse/php/read-log.php?limit=10', true);
   xhr.onreadystatechange = function() {
-    if (xhr.readyState === 4 && xhr.status === 200) {
-      var entries = JSON.parse(xhr.responseText);
-      var container = document.getElementById('occ-recent-activity');
-      if (!container) return;
-      if (!entries.length) {
-        container.innerHTML = '<em>No recent activity</em>';
-        return;
-      }
-      var html = '<table class="occ-recent-table"><thead><tr><th>Time</th><th>Method</th><th>Path</th><th>Status</th></tr></thead><tbody>';
-      for (var i = entries.length - 1; i >= 0; i--) {
-        var e = entries[i];
-        var t = e.timestamp || '';
-        // Format: "HH:MM:SS" from ISO timestamp
-        var m = t.match(/T(\d{2}:\d{2}:\d{2})/);
-        var short_t = m ? m[1] : t.substring(11, 19);
-        var statusCls = e.statusCode >= 200 && e.statusCode < 300 ? 'occ-status-2xx' : (e.statusCode >= 400 ? 'occ-status-4xx' : '');
-        html += '<tr><td>' + escapeHtml(short_t) + '</td><td>' + escapeHtml(e.method) + '</td><td>' + escapeHtml(e.path) + '</td><td class="' + statusCls + '">' + e.statusCode + '</td></tr>';
-      }
-      html += '</tbody>';
-      html += '</table>';
-      container.innerHTML = html;
+    if (xhr.readyState !== 4) return;
+    var container = document.getElementById('occ-recent-activity');
+    if (!container) return;
+
+    var resp = null;
+    try {
+      resp = xhr.responseText ? JSON.parse(xhr.responseText) : null;
+    } catch (e) {}
+
+    if (xhr.status !== 200 || !resp || !resp.success) {
+      container.innerHTML = '<em>Unable to load recent activity</em>';
+      return;
     }
+
+    var entries = resp.entries || [];
+    if (!entries.length) {
+      container.innerHTML = '<em>No recent activity</em>';
+      return;
+    }
+
+    var html = '<table class="occ-recent-table"><thead><tr><th>Time</th><th>Method</th><th>Path</th><th>Status</th></tr></thead><tbody>';
+    for (var i = entries.length - 1; i >= 0; i--) {
+      var e = entries[i];
+      var t = e.timestamp || '';
+      var m = t.match(/T(\d{2}:\d{2}:\d{2})/);
+      var shortT = m ? m[1] : t.substring(11, 19);
+      var statusCls = e.statusCode >= 200 && e.statusCode < 300 ? 'occ-status-2xx' : (e.statusCode >= 400 ? 'occ-status-4xx' : '');
+      html += '<tr><td>' + occEscapeHtml(shortT) + '</td><td>' + occEscapeHtml(e.method) + '</td><td>' + occEscapeHtml(e.path) + '</td><td class="' + statusCls + '">' + occEscapeHtml(e.statusCode) + '</td></tr>';
+    }
+    html += '</tbody></table>';
+    container.innerHTML = html;
   };
   xhr.send();
 }
@@ -376,75 +432,52 @@ function occSaveSettings(e) {
   e.preventDefault();
   var form = document.getElementById('occ-settings-form');
   var btn = document.getElementById('occ-apply-btn');
-  var status = document.getElementById('occ-settings-status');
 
   btn.disabled = true;
   btn.textContent = 'Saving...';
-  status.textContent = '';
+  occSetInlineStatus('occ-settings-status', 'info', 'Saving settings...', 0);
 
-  // Collect form fields as query params
   var params = ['ajax=1'];
   var inputs = form.querySelectorAll('input[name], select[name]');
   for (var i = 0; i < inputs.length; i++) {
     var inp = inputs[i];
-    if (inp.name && inp.name !== 'csrf_token') {
+    if (inp.name && inp.name !== 'csrf_token' && inp.name !== 'UNRAID_WEBUI_PORT') {
       params.push(encodeURIComponent(inp.name) + '=' + encodeURIComponent(inp.value));
     }
   }
+  var webUiPort = form.querySelector('input[name="UNRAID_WEBUI_PORT"]');
+  if (webUiPort) params.push('UNRAID_WEBUI_PORT=' + encodeURIComponent(webUiPort.value));
 
   var xhr = new XMLHttpRequest();
   xhr.open('GET', '/plugins/unraidclaw-browse/php/save-settings.php?' + params.join('&'), true);
   xhr.onreadystatechange = function() {
-    if (xhr.readyState === 4) {
-      btn.disabled = false;
-      btn.textContent = 'Apply';
-      if (xhr.status === 200 && xhr.responseText) {
-        try {
-          var resp = JSON.parse(xhr.responseText);
-          if (resp.success) {
-            status.textContent = 'Settings saved! Service ' + resp.service + '.';
-            status.style.color = '#51cf66';
-            var isRunning = resp.service !== 'stopped';
-            var badge = document.getElementById('occ-service-status');
-            if (badge) {
-              badge.textContent = isRunning ? 'Running' : 'Stopped';
-              badge.className = isRunning ? 'occ-badge occ-badge-ok' : 'occ-badge occ-badge-stopped';
-            }
-            var actions = document.getElementById('occ-service-actions');
-            if (actions) {
-              if (isRunning) {
-                actions.innerHTML = '<button class="occ-btn occ-btn-danger" onclick="occServiceControl(\'stop\')">Stop</button>' +
-                  '<button class="occ-btn occ-btn-warning" onclick="occServiceControl(\'restart\')">Restart</button>';
-              } else {
-                actions.innerHTML = '<button class="occ-btn occ-btn-success" onclick="occServiceControl(\'start\')">Start</button>';
-              }
-            }
-            var unraidApiInput = document.getElementById('occ-unraid-api-key');
-            var unraidApiBadge = document.getElementById('occ-unraid-api-key-badge');
-            if (unraidApiInput) {
-              unraidApiInput.value = '';
-              if (resp.hasUnraidApiKey) {
-                if (unraidApiBadge) unraidApiBadge.innerHTML = '<span class="occ-badge occ-badge-ok" style="margin-left:8px">Configured</span>';
-                unraidApiInput.placeholder = '(key configured - leave blank to keep)';
-              } else {
-                if (unraidApiBadge) unraidApiBadge.innerHTML = '';
-                unraidApiInput.placeholder = 'Enter Unraid API key';
-              }
-            }
-          } else {
-            status.textContent = 'Error saving settings';
-            status.style.color = '#ff6b6b';
-          }
-        } catch(ex) {
-          status.textContent = 'Error: ' + xhr.responseText.substring(0, 100);
-          status.style.color = '#ff6b6b';
-        }
-      } else {
-        status.textContent = 'Error (HTTP ' + xhr.status + ')';
-        status.style.color = '#ff6b6b';
+    if (xhr.readyState !== 4) return;
+
+    btn.disabled = false;
+    btn.textContent = 'Apply';
+
+    var resp = null;
+    try {
+      resp = xhr.responseText ? JSON.parse(xhr.responseText) : null;
+    } catch (e2) {}
+
+    if (xhr.status === 200 && resp && resp.success) {
+      occApplyServiceState(resp.service);
+      var unraidApiInput = document.getElementById('occ-unraid-api-key');
+      var unraidApiBadge = document.getElementById('occ-unraid-api-key-badge');
+      if (unraidApiInput) {
+        unraidApiInput.value = '';
+        unraidApiInput.placeholder = resp.hasUnraidApiKey ? '(key configured - leave blank to keep)' : 'Enter Unraid API key';
       }
-      setTimeout(function() { status.textContent = ''; }, 5000);
+      if (unraidApiBadge) {
+        unraidApiBadge.innerHTML = resp.hasUnraidApiKey ? '<span class="occ-badge occ-badge-ok" style="margin-left:8px">Configured</span>' : '';
+      }
+      occSetInlineStatus('occ-settings-status', 'success', resp.message + ' Service is now ' + (resp.service && resp.service.isRunning ? 'running.' : 'stopped.'), 5000);
+      return;
     }
+
+    occApplyServiceState(resp && resp.service ? resp.service : null);
+    occSetInlineStatus('occ-settings-status', 'error', (resp && resp.message) || ('Error saving settings (HTTP ' + xhr.status + ')'), 5000);
   };
   xhr.send();
   return false;
@@ -454,12 +487,6 @@ function occResetDefaults() {
   if (!confirm('Reset all settings to defaults?')) return;
   var form = document.getElementById('occ-settings-form');
   if (form) form.reset();
-}
-
-// ── Utility ──
-function escapeHtml(text) {
-  if (!text) return '';
-  var div = document.createElement('div');
-  div.appendChild(document.createTextNode(text));
-  return div.innerHTML;
+  occResetGeneratedKeyDisplay();
+  occSetInlineStatus('occ-custom-key-status', 'info', 'Form reset. Defaults are shown locally until you save.', 5000);
 }

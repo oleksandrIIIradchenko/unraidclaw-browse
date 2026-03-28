@@ -24,6 +24,7 @@ packages/*/node_modules/
 packages/*/*/node_modules/
 dist/
 build/
-packages/*/dist/
-packages/*/*/dist/
-packages/*/build/
+*.tsbuildinfo
+.DS_Store
+forum-post.html
+config/.pnpm-store/

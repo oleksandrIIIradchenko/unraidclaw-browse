@@ -1,5 +1,5 @@
 #!/bin/bash
-# Auto-start unraidclaw-browse when array starts (if enabled)
+# Auto-start unraidclaw when array starts (if enabled)
 CONFIG="/boot/config/plugins/unraidclaw-browse/unraidclaw-browse.cfg"
 if [ -f "$CONFIG" ]; then
   SERVICE=$(grep -oP 'SERVICE="\K[^"]+' "$CONFIG")

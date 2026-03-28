@@ -521,6 +521,52 @@ select {
   font-weight: 600;
 }
 
+.occ-inline-status {
+  display: inline-block;
+  min-height: 20px;
+  padding: 0;
+  color: var(--occ-text-muted);
+}
+
+.occ-inline-status-success {
+  color: #7ee2a2;
+}
+
+.occ-inline-status-error {
+  color: #ff8f99;
+}
+
+.occ-inline-status-info {
+  color: #8dc3ff;
+}
+
+.occ-log-state {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 8px 4px;
+  font-style: italic;
+}
+
+.occ-log-state-loading::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: var(--occ-primary);
+  border-radius: 50%;
+  animation: occ-spin 0.8s linear infinite;
+}
+
+.occ-log-state-empty {
+  color: var(--occ-text-soft);
+}
+
+.occ-log-state-error {
+  color: #ff8f99;
+}
+
 /* Tables */
 .occ-settings table,
 .occ-log-viewer table,
@@ -635,6 +681,11 @@ select {
   align-items: center;
   gap: 6px;
   color: var(--occ-text);
+}
+
+@keyframes occ-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* Small screens */

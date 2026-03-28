@@ -25,43 +25,60 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile --prod=false
+        run: pnpm install --frozen-lockfile
 
       - name: Extract version
         id: version
-        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+        shell: bash
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
 
       - name: Build package
-        run: bash packages/unraid-plugin/scripts/build.sh "${{ steps.version.outputs.VERSION }}"
+        run: bash packages/unraid-plugin/scripts/build.sh "${{ steps.version.outputs.version }}"
 
       - name: Read MD5
         id: md5
+        shell: bash
         run: |
-          FILE="packages/unraid-plugin/build/unraidclaw-browse-${{ steps.version.outputs.VERSION }}-x86_64-1.txz"
-          echo "MD5=$(md5sum "$FILE" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          echo "md5=$(cat packages/unraid-plugin/build/unraidclaw-browse-${{ steps.version.outputs.version }}-x86_64-1.txz.md5)" >> "$GITHUB_OUTPUT"
 
-      - name: Update .plg
+      - name: Update .plg version and MD5
+        shell: bash
         run: |
           PLG="packages/unraid-plugin/unraidclaw-browse.plg"
-          sed -i 's/<!ENTITY version   "[^"]*">/<!ENTITY version   "${{ steps.version.outputs.VERSION }}">/' "$PLG"
-          sed -i 's/<!ENTITY md5       "[^"]*">/<!ENTITY md5       "${{ steps.md5.outputs.MD5 }}">/' "$PLG"
+          sed -i 's/<!ENTITY version   "[^"]*">/<!ENTITY version   "${{ steps.version.outputs.version }}">/' "$PLG"
+          sed -i 's/<!ENTITY md5       "[^"]*">/<!ENTITY md5       "${{ steps.md5.outputs.md5 }}">/' "$PLG"
 
       - name: Commit .plg update
+        shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout main
           git add packages/unraid-plugin/unraidclaw-browse.plg
-          git diff --cached --quiet && echo "No .plg changes to commit" || git commit -m "Update .plg to v${{ steps.version.outputs.VERSION }} with MD5"
-          git push origin main
+          git diff --cached --quiet && echo "No .plg changes to commit" || git commit -m "release: update unraidclaw-browse.plg for v${{ steps.version.outputs.version }}"
+          git push origin HEAD:main
 
-      - name: Create release
+      - name: Prepare release notes
+        shell: bash
+        run: |
+          cat > release-notes.md <<'EOF'
+          ## Installation
+
+          ```bash
+          plugin install https://raw.githubusercontent.com/oleksandrIIIradchenko/unraidclaw-browse/main/packages/unraid-plugin/unraidclaw-browse.plg
+          ```
+          EOF
+
+      - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+        shell: bash
         run: |
-          VERSION="${{ steps.version.outputs.VERSION }}"
+          VERSION="${{ steps.version.outputs.version }}"
           PKG="packages/unraid-plugin/build/unraidclaw-browse-${VERSION}-x86_64-1.txz"
           gh release create "v${VERSION}" \
             --title "v${VERSION}" \
             --generate-notes \
-            "$PKG"
+            --notes-file release-notes.md \
+            "$PKG" \
+            "${PKG}.md5" \
+            "packages/unraid-plugin/unraidclaw-browse.plg"
